@@ -1,11 +1,11 @@
 package io.jenkins.plugins.ghacloud;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -19,51 +19,59 @@ public class GitHubClient {
 
     private final String apiUrl;
     private final String token;
-    private final HttpClient httpClient;
 
     public GitHubClient(String apiUrl, String token) {
         this.apiUrl = apiUrl.endsWith("/") ? apiUrl.substring(0, apiUrl.length() - 1) : apiUrl;
         this.token = token;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(30))
-                .build();
     }
 
     /**
-     * Triggers a workflow_dispatch event on the specified repository and workflow file.
+     * Triggers a workflow_dispatch event on the specified repository and workflow
+     * file.
      *
-     * @param repository     owner/repo
-     * @param workflowFile   the workflow filename (e.g. jenkins-agent.yml)
-     * @param ref            git ref to run against (e.g. main)
-     * @param inputs         key-value inputs forwarded to the workflow
+     * @param repository   owner/repo
+     * @param workflowFile the workflow filename (e.g. jenkins-agent.yml)
+     * @param ref          git ref to run against (e.g. main)
+     * @param inputs       key-value inputs forwarded to the workflow
      */
     public void triggerWorkflow(String repository, String workflowFile, String ref,
-                                Map<String, String> inputs) throws IOException {
+            Map<String, String> inputs) throws IOException {
         String url = apiUrl + "/repos/" + repository + "/actions/workflows/" + workflowFile + "/dispatches";
 
         String body = buildJson(ref, inputs);
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + token)
-                .header("Accept", "application/vnd.github+json")
-                .header("X-GitHub-Api-Version", "2022-11-28")
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(body))
-                .timeout(Duration.ofSeconds(30))
-                .build();
+        LOGGER.log(Level.INFO, "Dispatching workflow: POST {0}", url);
 
-        LOGGER.log(Level.FINE, "Dispatching workflow: POST {0}", url);
-
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         try {
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != 204) {
-                throw new IOException("GitHub API returned HTTP " + response.statusCode()
-                        + " for workflow dispatch: " + response.body());
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(30_000);
+            conn.setReadTimeout(30_000);
+            conn.setRequestProperty("Authorization", "Bearer " + token);
+            conn.setRequestProperty("Accept", "application/vnd.github+json");
+            conn.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
+            conn.setRequestProperty("Content-Type", "application/json");
+
+            byte[] payload = body.getBytes(StandardCharsets.UTF_8);
+            conn.setFixedLengthStreamingMode(payload.length);
+
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(payload);
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Interrupted while calling GitHub API", e);
+
+            int status = conn.getResponseCode();
+            if (status != 204) {
+                InputStream errStream = conn.getErrorStream();
+                String error = errStream != null
+                        ? new String(errStream.readAllBytes(), StandardCharsets.UTF_8)
+                        : "(no response body)";
+                throw new IOException("GitHub API returned HTTP " + status
+                        + " for workflow dispatch: " + error);
+            }
+            LOGGER.log(Level.INFO, "Workflow dispatch successful (HTTP 204)");
+        } finally {
+            conn.disconnect();
         }
     }
 

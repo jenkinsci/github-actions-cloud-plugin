@@ -160,7 +160,7 @@ public class GitHubActionsCloud extends Cloud {
                         StringCredentials.class,
                         Jenkins.get(),
                         ACL.SYSTEM2,
-                        URIRequirementBuilder.fromUri(githubApiUrl).build()),
+                        Collections.emptyList()),
                 CredentialsMatchers.withId(credentialsId)
         );
         if (creds == null) {

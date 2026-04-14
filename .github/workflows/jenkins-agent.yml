@@ -32,4 +32,5 @@ jobs:
             -secret "${{ inputs.agent_secret }}" \
             -name "${{ inputs.agent_name }}" \
             -workDir "/home/runner/agent" \
-            -webSocket
+            -webSocket \
+            -noReconnect

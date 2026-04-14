@@ -20,15 +20,18 @@ public class GitHubActionsAgentTemplate extends AbstractDescribableImpl<GitHubAc
     private final int numExecutors;
     private final String gitRef;
     private final int idleMinutes;
+    private final String workflowFileName;
 
     @DataBoundConstructor
     public GitHubActionsAgentTemplate(String labelString, String remoteFs,
-                                      int numExecutors, String gitRef, int idleMinutes) {
+                                      int numExecutors, String gitRef, int idleMinutes,
+                                      String workflowFileName) {
         this.labelString = labelString;
         this.remoteFs = (remoteFs != null && !remoteFs.isEmpty()) ? remoteFs : "/home/runner/agent";
         this.numExecutors = numExecutors > 0 ? numExecutors : 1;
         this.gitRef = (gitRef != null && !gitRef.isEmpty()) ? gitRef : "main";
         this.idleMinutes = idleMinutes > 0 ? idleMinutes : 5;
+        this.workflowFileName = workflowFileName;
     }
 
     public String getLabelString() {
@@ -49,6 +52,10 @@ public class GitHubActionsAgentTemplate extends AbstractDescribableImpl<GitHubAc
 
     public int getIdleMinutes() {
         return idleMinutes;
+    }
+
+    public String getWorkflowFileName() {
+        return workflowFileName;
     }
 
     public boolean matches(Label label) {

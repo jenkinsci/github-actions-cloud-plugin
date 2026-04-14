@@ -1,0 +1,41 @@
+name: Jenkins Agent (Windows)
+
+on:
+  workflow_dispatch:
+    inputs:
+      jenkins_url:
+        description: 'Jenkins server URL'
+        required: true
+      agent_name:
+        description: 'Jenkins agent name'
+        required: true
+      agent_secret:
+        description: 'JNLP secret for this agent'
+        required: true
+
+jobs:
+  agent:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Mask secret
+        run: echo "::add-mask::${{ inputs.agent_secret }}"
+
+      - name: Download Jenkins agent JAR
+        run: |
+          curl -sSfL --retry 3 --retry-delay 5 -o agent.jar `
+            -H "ngrok-skip-browser-warning: true" `
+            "${{ inputs.jenkins_url }}jnlpJars/agent.jar"
+
+      - name: Connect to Jenkins
+        env:
+          AGENT_SECRET: ${{ inputs.agent_secret }}
+        run: |
+          java -jar agent.jar `
+            -url "${{ inputs.jenkins_url }}" `
+            -secret "$env:AGENT_SECRET" `
+            -name "${{ inputs.agent_name }}" `
+            -workDir "C:\actions\agent" `
+            -webSocket `
+            -noReconnect

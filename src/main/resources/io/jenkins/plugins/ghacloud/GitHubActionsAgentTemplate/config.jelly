@@ -21,6 +21,10 @@
         <f:textbox default="5" />
     </f:entry>
 
+    <f:entry title="${%Workflow File Name (optional, overrides cloud default)}" field="workflowFileName">
+        <f:textbox placeholder="jenkins-agent-windows.yml" />
+    </f:entry>
+
     <f:entry>
         <div align="right">
             <f:repeatableDeleteButton />

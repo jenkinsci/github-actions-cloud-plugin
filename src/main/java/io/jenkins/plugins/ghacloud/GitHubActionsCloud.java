@@ -173,8 +173,13 @@ public class GitHubActionsCloud extends Cloud {
         inputs.put("agent_name", agentName);
         inputs.put("agent_secret", secret);
 
-        client.triggerWorkflow(repository, workflowFileName, template.getGitRef(), inputs);
-        LOGGER.log(Level.INFO, "Triggered GitHub Actions workflow for agent: {0}", agentName);
+        // Use template-level workflow file if set, otherwise fall back to cloud-level
+        String workflow = (template.getWorkflowFileName() != null && !template.getWorkflowFileName().isEmpty())
+                ? template.getWorkflowFileName() : workflowFileName;
+
+        client.triggerWorkflow(repository, workflow, template.getGitRef(), inputs);
+        LOGGER.log(Level.INFO, "Triggered GitHub Actions workflow {0} for agent: {1}",
+                new Object[]{workflow, agentName});
 
         return slave;
     }

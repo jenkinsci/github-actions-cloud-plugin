@@ -37,9 +37,27 @@ public class GitHubClient {
     public void triggerWorkflow(String repository, String workflowFile, String ref,
             Map<String, String> inputs) throws IOException {
         String url = apiUrl + "/repos/" + repository + "/actions/workflows/" + workflowFile + "/dispatches";
-
         String body = buildJson(ref, inputs);
 
+        IOException lastException = null;
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            try {
+                doPost(url, body);
+                return;
+            } catch (javax.net.ssl.SSLException e) {
+                lastException = e;
+                LOGGER.log(Level.WARNING, "Attempt {0}/3 failed with SSL error, retrying: {1}",
+                        new Object[]{attempt, e.getMessage()});
+                try { Thread.sleep(2000L * attempt); } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("Interrupted during retry", ie);
+                }
+            }
+        }
+        throw lastException;
+    }
+
+    private void doPost(String url, String body) throws IOException {
         LOGGER.log(Level.INFO, "Dispatching workflow: POST {0}", url);
 
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();

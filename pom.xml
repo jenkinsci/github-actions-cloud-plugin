@@ -13,13 +13,36 @@
 
     <groupId>io.jenkins.plugins</groupId>
     <artifactId>github-actions-cloud</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>${changelist}</version>
     <packaging>hpi</packaging>
 
     <name>GitHub Actions Cloud</name>
     <description>Dynamically provisions Jenkins agents as GitHub Actions workflow runs</description>
+    <url>https://github.com/jenkinsci/github-actions-cloud-plugin</url>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>gdams</id>
+            <name>George Adams</name>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/jenkinsci/github-actions-cloud-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:jenkinsci/github-actions-cloud-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/github-actions-cloud-plugin</url>
+        <tag>${scmTag}</tag>
+    </scm>
 
     <properties>
+        <changelist>999999-SNAPSHOT</changelist>
         <jenkins.version>2.462.3</jenkins.version>
     </properties>
 

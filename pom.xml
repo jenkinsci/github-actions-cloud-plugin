@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.88</version>
+        <version>6.2116.v7501b_67dc517</version>
         <relativePath />
     </parent>
 
@@ -27,13 +27,6 @@
         </license>
     </licenses>
 
-    <developers>
-        <developer>
-            <id>gdams</id>
-            <name>George Adams</name>
-        </developer>
-    </developers>
-
     <scm>
         <connection>scm:git:https://github.com/jenkinsci/github-actions-cloud-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:jenkinsci/github-actions-cloud-plugin.git</developerConnection>
@@ -43,15 +36,18 @@
 
     <properties>
         <changelist>999999-SNAPSHOT</changelist>
-        <jenkins.version>2.462.3</jenkins.version>
+        <jenkins.baseline>2.528</jenkins.baseline>
+        <jenkins.version>${jenkins.baseline}.3</jenkins.version>
+        <hpi.strictBundledArtifacts>true</hpi.strictBundledArtifacts>
+        <ban-commons-lang-2.skip>false</ban-commons-lang-2.skip>
     </properties>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.462.x</artifactId>
-                <version>3435.v238d66a_043fb_</version>
+                <artifactId>bom-${jenkins.baseline}.x</artifactId>
+                <version>6269.v7a_159d68a_366</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

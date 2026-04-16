@@ -17,6 +17,7 @@ import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -207,14 +208,18 @@ public class GitHubActionsCloud extends Cloud {
             return "GitHub Actions Cloud";
         }
 
+        @RequirePOST
         public FormValidation doCheckName(@QueryParameter String value) {
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             if (value == null || value.trim().isEmpty()) {
                 return FormValidation.error("Cloud name is required");
             }
             return FormValidation.ok();
         }
 
+        @RequirePOST
         public FormValidation doCheckRepository(@QueryParameter String value) {
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             if (value == null || value.trim().isEmpty()) {
                 return FormValidation.error("Repository is required (format: owner/repo)");
             }
@@ -224,13 +229,16 @@ public class GitHubActionsCloud extends Cloud {
             return FormValidation.ok();
         }
 
+        @RequirePOST
         public FormValidation doCheckWorkflowFileName(@QueryParameter String value) {
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             if (value == null || value.trim().isEmpty()) {
                 return FormValidation.error("Workflow file name is required (e.g. jenkins-agent.yml)");
             }
             return FormValidation.ok();
         }
 
+        @RequirePOST
         public ListBoxModel doFillCredentialsIdItems(@QueryParameter String credentialsId) {
             Jenkins jenkins = Jenkins.get();
             if (!jenkins.hasPermission(Jenkins.ADMINISTER)) {

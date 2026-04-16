@@ -18,6 +18,8 @@ public class GitHubClient {
     private static final Logger LOGGER = Logger.getLogger(GitHubClient.class.getName());
 
     private final String apiUrl;
+    // Not persisted to disk — this is a transient runtime object, token is resolved from credentials at use time
+    @SuppressWarnings("lgtm[jenkins/plaintext-storage]")
     private final String token;
 
     public GitHubClient(String apiUrl, String token) {

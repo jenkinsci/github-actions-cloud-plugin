@@ -8,6 +8,7 @@ import hudson.util.FormValidation;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 
 import java.util.Set;
 
@@ -77,14 +78,18 @@ public class GitHubActionsAgentTemplate extends AbstractDescribableImpl<GitHubAc
             return "GitHub Actions Agent Template";
         }
 
+        @RequirePOST
         public FormValidation doCheckLabelString(@QueryParameter String value) {
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             if (value == null || value.trim().isEmpty()) {
                 return FormValidation.warning("No labels set — this template will match any label request");
             }
             return FormValidation.ok();
         }
 
+        @RequirePOST
         public FormValidation doCheckNumExecutors(@QueryParameter String value) {
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             try {
                 int n = Integer.parseInt(value);
                 if (n < 1) {

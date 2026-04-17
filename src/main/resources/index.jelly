@@ -3,6 +3,6 @@
     Dynamically provisions Jenkins agents as GitHub Actions workflow runs.
     When Jenkins needs a build agent, this plugin triggers a GitHub Actions
     workflow that starts a runner which connects back to Jenkins via inbound
-    (JNLP/WebSocket) connection. Agents are automatically terminated after
+    (inbound/WebSocket) connection. Agents are automatically terminated after
     being idle.
 </div>

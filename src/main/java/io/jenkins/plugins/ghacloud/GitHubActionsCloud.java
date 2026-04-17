@@ -185,7 +185,7 @@ public class GitHubActionsCloud extends Cloud {
         Jenkins jenkins = Jenkins.get();
         jenkins.addNode(agent);
 
-        // Retrieve the JNLP secret for inbound connection
+        // Retrieve the agent secret for inbound connection
         hudson.model.Computer computer = jenkins.getComputer(agentName);
         String secret = "";
         if (computer instanceof hudson.slaves.SlaveComputer) {

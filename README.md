@@ -57,7 +57,7 @@ on:
         description: 'Jenkins agent name'
         required: true
       agent_secret:
-        description: 'JNLP secret for this agent'
+        description: 'Jenkins agent secret'
         required: true
 
 jobs:

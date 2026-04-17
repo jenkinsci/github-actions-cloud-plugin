@@ -25,7 +25,7 @@
         <f:textbox clazz="required" placeholder="jenkins-agent.yml" />
     </f:entry>
 
-    <f:entry title="${%Max Number of Agents}" field="agentCap">
+    <f:entry title="${%Max Number of Agents}" field="maxAgents">
         <f:number default="0" min="0" />
     </f:entry>
 

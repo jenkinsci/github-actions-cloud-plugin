@@ -14,18 +14,20 @@ public class GitHubActionsCloudTest {
     @Rule
     public JenkinsRule j = new JenkinsRule();
 
+    private GitHubActionsAgentTemplate createTemplate(String labels, String workflowFile) {
+        GitHubActionsAgentTemplate t = new GitHubActionsAgentTemplate(labels);
+        t.setWorkflowFileName(workflowFile);
+        return t;
+    }
+
+    private GitHubActionsCloud createCloud(String name, String repo, GitHubActionsAgentTemplate... templates) {
+        return new GitHubActionsCloud(name, repo, "github-token-id", List.of(templates));
+    }
+
     @Test
     public void cloudAppearsInConfiguration() {
-        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate(
-                "gha-linux", "/home/runner/agent", 1, "main", 5, "jenkins-agent.yml", 0);
-
-        GitHubActionsCloud cloud = new GitHubActionsCloud(
-                "test-cloud",
-                "https://api.github.com",
-                "myorg/myrepo",
-                "github-token-id",
-                0,
-                List.of(template));
+        GitHubActionsAgentTemplate template = createTemplate("gha-linux", "jenkins-agent.yml");
+        GitHubActionsCloud cloud = createCloud("test-cloud", "myorg/myrepo", template);
 
         j.jenkins.clouds.add(cloud);
 
@@ -34,16 +36,8 @@ public class GitHubActionsCloudTest {
 
     @Test
     public void canProvisionMatchingLabel() {
-        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate(
-                "gha-linux", "/home/runner/agent", 1, "main", 5, "jenkins-agent.yml", 0);
-
-        GitHubActionsCloud cloud = new GitHubActionsCloud(
-                "test-cloud",
-                "https://api.github.com",
-                "myorg/myrepo",
-                "github-token-id",
-                0,
-                List.of(template));
+        GitHubActionsAgentTemplate template = createTemplate("gha-linux", "jenkins-agent.yml");
+        GitHubActionsCloud cloud = createCloud("test-cloud", "myorg/myrepo", template);
 
         j.jenkins.clouds.add(cloud);
 
@@ -53,16 +47,8 @@ public class GitHubActionsCloudTest {
 
     @Test
     public void cannotProvisionNonMatchingLabel() {
-        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate(
-                "gha-linux", "/home/runner/agent", 1, "main", 5, "jenkins-agent.yml", 0);
-
-        GitHubActionsCloud cloud = new GitHubActionsCloud(
-                "test-cloud",
-                "https://api.github.com",
-                "myorg/myrepo",
-                "github-token-id",
-                0,
-                List.of(template));
+        GitHubActionsAgentTemplate template = createTemplate("gha-linux", "jenkins-agent.yml");
+        GitHubActionsCloud cloud = createCloud("test-cloud", "myorg/myrepo", template);
 
         j.jenkins.clouds.add(cloud);
 
@@ -72,8 +58,7 @@ public class GitHubActionsCloudTest {
 
     @Test
     public void templateMatchesLabel() {
-        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate(
-                "gha-linux docker", "/home/runner/agent", 1, "main", 5, "jenkins-agent.yml", 0);
+        GitHubActionsAgentTemplate template = createTemplate("gha-linux docker", "jenkins-agent.yml");
 
         assertTrue(template.matches(Label.get("gha-linux")));
         assertTrue(template.matches(Label.get("docker")));
@@ -82,12 +67,12 @@ public class GitHubActionsCloudTest {
 
     @Test
     public void templateDefaults() {
-        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate(
-                "test", null, 0, null, 0, "jenkins-agent.yml", 0);
+        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate("test");
 
         assertEquals("/home/runner/agent", template.getRemoteFs());
         assertEquals(1, template.getNumExecutors());
         assertEquals("main", template.getGitRef());
         assertEquals(5, template.getIdleMinutes());
+        assertEquals(0, template.getMaxAgents());
     }
 }

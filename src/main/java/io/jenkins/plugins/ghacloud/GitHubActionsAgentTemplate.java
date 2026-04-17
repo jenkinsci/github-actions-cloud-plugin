@@ -7,6 +7,7 @@ import hudson.model.labels.LabelAtom;
 import hudson.util.FormValidation;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 
@@ -16,25 +17,17 @@ import hudson.model.Describable;
 
 public class GitHubActionsAgentTemplate implements Describable<GitHubActionsAgentTemplate> {
 
-    private final String labelString;
-    private final String remoteFs;
-    private final int numExecutors;
-    private final String gitRef;
-    private final int idleMinutes;
-    private final String workflowFileName;
-    private final int agentCap;
+    private String labelString;
+    private String remoteFs = "/home/runner/agent";
+    private int numExecutors = 1;
+    private String gitRef = "main";
+    private int idleMinutes = 5;
+    private String workflowFileName;
+    private int maxAgents;
 
     @DataBoundConstructor
-    public GitHubActionsAgentTemplate(String labelString, String remoteFs,
-                                      int numExecutors, String gitRef, int idleMinutes,
-                                      String workflowFileName, int agentCap) {
+    public GitHubActionsAgentTemplate(String labelString) {
         this.labelString = labelString;
-        this.remoteFs = (remoteFs != null && !remoteFs.isEmpty()) ? remoteFs : "/home/runner/agent";
-        this.numExecutors = numExecutors > 0 ? numExecutors : 1;
-        this.gitRef = (gitRef != null && !gitRef.isEmpty()) ? gitRef : "main";
-        this.idleMinutes = idleMinutes > 0 ? idleMinutes : 5;
-        this.workflowFileName = workflowFileName;
-        this.agentCap = agentCap;
     }
 
     public String getLabelString() {
@@ -45,24 +38,54 @@ public class GitHubActionsAgentTemplate implements Describable<GitHubActionsAgen
         return remoteFs;
     }
 
+    @DataBoundSetter
+    public void setRemoteFs(String remoteFs) {
+        this.remoteFs = (remoteFs != null && !remoteFs.isEmpty()) ? remoteFs : "/home/runner/agent";
+    }
+
     public int getNumExecutors() {
         return numExecutors;
+    }
+
+    @DataBoundSetter
+    public void setNumExecutors(int numExecutors) {
+        this.numExecutors = numExecutors > 0 ? numExecutors : 1;
     }
 
     public String getGitRef() {
         return gitRef;
     }
 
+    @DataBoundSetter
+    public void setGitRef(String gitRef) {
+        this.gitRef = (gitRef != null && !gitRef.isEmpty()) ? gitRef : "main";
+    }
+
     public int getIdleMinutes() {
         return idleMinutes;
+    }
+
+    @DataBoundSetter
+    public void setIdleMinutes(int idleMinutes) {
+        this.idleMinutes = idleMinutes > 0 ? idleMinutes : 5;
     }
 
     public String getWorkflowFileName() {
         return workflowFileName;
     }
 
-    public int getAgentCap() {
-        return agentCap;
+    @DataBoundSetter
+    public void setWorkflowFileName(String workflowFileName) {
+        this.workflowFileName = workflowFileName;
+    }
+
+    public int getMaxAgents() {
+        return maxAgents;
+    }
+
+    @DataBoundSetter
+    public void setMaxAgents(int maxAgents) {
+        this.maxAgents = maxAgents;
     }
 
     public boolean matches(Label label) {

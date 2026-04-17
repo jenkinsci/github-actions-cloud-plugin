@@ -5,18 +5,9 @@
         <f:textbox />
     </f:entry>
 
-    <j:choose>
-        <j:when test="${descriptor.apiUriSelectable}">
-            <f:entry title="${%GitHub API URL}" field="githubApiUrl">
-                <f:select />
-            </f:entry>
-        </j:when>
-        <j:otherwise>
-            <f:entry title="${%GitHub API URL}" field="githubApiUrl">
-                <f:readOnlyTextbox />
-            </f:entry>
-        </j:otherwise>
-    </j:choose>
+    <f:entry title="${%GitHub API URL}" field="githubApiUrl">
+        <f:select />
+    </f:entry>
 
     <f:entry title="${%Repository}" field="repository">
         <f:textbox placeholder="owner/repo" />
@@ -26,7 +17,7 @@
         <c:select />
     </f:entry>
 
-    <f:entry title="${%Max Number of Agents}" field="agentCap">
+    <f:entry title="${%Max Number of Agents}" field="maxAgents">
         <f:number default="0" min="0" />
     </f:entry>
 

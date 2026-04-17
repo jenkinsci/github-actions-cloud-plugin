@@ -16,6 +16,7 @@ import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 
@@ -35,27 +36,30 @@ public class GitHubActionsCloud extends Cloud {
 
     private static final Logger LOGGER = Logger.getLogger(GitHubActionsCloud.class.getName());
 
-    private final String githubApiUrl;
+    private String githubApiUrl = "https://api.github.com";
     private final String repository;
     private final String credentialsId;
-    private final int agentCap;
+    private int maxAgents;
     private final List<GitHubActionsAgentTemplate> templates;
 
     @DataBoundConstructor
-    public GitHubActionsCloud(String name, String githubApiUrl, String repository,
-                              String credentialsId, int agentCap,
+    public GitHubActionsCloud(String name, String repository,
+                              String credentialsId,
                               List<GitHubActionsAgentTemplate> templates) {
         super(name);
-        this.githubApiUrl = (githubApiUrl != null && !githubApiUrl.isEmpty())
-                ? githubApiUrl : "https://api.github.com";
         this.repository = repository;
         this.credentialsId = credentialsId;
-        this.agentCap = agentCap;
         this.templates = templates != null ? new ArrayList<>(templates) : new ArrayList<>();
     }
 
     public String getGithubApiUrl() {
         return githubApiUrl;
+    }
+
+    @DataBoundSetter
+    public void setGithubApiUrl(String githubApiUrl) {
+        this.githubApiUrl = (githubApiUrl != null && !githubApiUrl.isEmpty())
+                ? githubApiUrl : "https://api.github.com";
     }
 
     public String getRepository() {
@@ -66,8 +70,13 @@ public class GitHubActionsCloud extends Cloud {
         return credentialsId;
     }
 
-    public int getAgentCap() {
-        return agentCap;
+    public int getMaxAgents() {
+        return maxAgents;
+    }
+
+    @DataBoundSetter
+    public void setMaxAgents(int maxAgents) {
+        this.maxAgents = maxAgents;
     }
 
     public List<GitHubActionsAgentTemplate> getTemplates() {
@@ -101,10 +110,10 @@ public class GitHubActionsCloud extends Cloud {
             }
         }
 
-        if (agentCap > 0 && totalCount >= agentCap) {
+        if (maxAgents > 0 && totalCount >= maxAgents) {
             LOGGER.log(Level.FINE,
-                    "Agent cap ({0}) reached for cloud {1}, skipping provisioning",
-                    new Object[]{agentCap, name});
+                    "Max agents ({0}) reached for cloud {1}, skipping provisioning",
+                    new Object[]{maxAgents, name});
             return plannedNodes;
         }
 
@@ -130,16 +139,16 @@ public class GitHubActionsCloud extends Cloud {
             }
 
             // Check per-template agent cap
-            if (template.getAgentCap() > 0) {
+            if (template.getMaxAgents() > 0) {
                 long templateAgentCount = Jenkins.get().getNodes().stream()
                         .filter(n -> n instanceof GitHubActionsAgent)
                         .map(n -> (GitHubActionsAgent) n)
                         .filter(a -> name.equals(a.getCloudName()) && template.matches(a))
                         .count();
-                if (templateAgentCount >= template.getAgentCap()) {
+                if (templateAgentCount >= template.getMaxAgents()) {
                     LOGGER.log(Level.FINE,
-                            "Template agent cap ({0}) reached for template with labels ''{1}'', skipping",
-                            new Object[]{template.getAgentCap(), template.getLabelString()});
+                            "Template max agents ({0}) reached for template with labels ''{1}'', skipping",
+                            new Object[]{template.getMaxAgents(), template.getLabelString()});
                     break;
                 }
             }
@@ -253,16 +262,11 @@ public class GitHubActionsCloud extends Cloud {
         public ListBoxModel doFillGithubApiUrlItems(@QueryParameter String githubApiUrl) {
             Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             ListBoxModel model = new ListBoxModel();
-            model.add("GitHub", "https://api.github.com");
+            model.add("GitHub (https://api.github.com)", "https://api.github.com");
             if (Jenkins.get().getPlugin("github") != null) {
                 GitHubEnterpriseHelper.addServers(model);
             }
             return model;
-        }
-
-        public boolean isApiUriSelectable() {
-            return Jenkins.get().getPlugin("github") != null
-                    && GitHubEnterpriseHelper.hasEnterpriseServers();
         }
 
         @RequirePOST

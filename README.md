@@ -79,7 +79,6 @@ jobs:
             -secret "$AGENT_SECRET" \
             -name "${{ inputs.agent_name }}" \
             -workDir "/home/runner/agent" \
-            -webSocket \
             -noReconnect
 ```
 

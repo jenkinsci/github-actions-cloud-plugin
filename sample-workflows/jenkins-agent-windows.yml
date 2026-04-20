@@ -48,5 +48,4 @@ jobs:
             -secret "$env:AGENT_SECRET" `
             -name "${{ inputs.agent_name }}" `
             -workDir "C:\agent" `
-            -webSocket `
             -noReconnect

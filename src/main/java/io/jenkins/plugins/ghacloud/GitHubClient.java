@@ -28,6 +28,61 @@ public class GitHubClient {
     }
 
     /**
+     * Represents the status of a GitHub Actions workflow run.
+     */
+    public static class WorkflowRunStatus {
+        private final String status;
+        private final String conclusion;
+
+        public WorkflowRunStatus(String status, String conclusion) {
+            this.status = status;
+            this.conclusion = conclusion;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public String getConclusion() {
+            return conclusion;
+        }
+
+        /** Returns true if the workflow run has completed (regardless of outcome). */
+        public boolean isCompleted() {
+            return "completed".equals(status);
+        }
+
+        /** Returns true if the workflow run completed with a failure, cancellation, or timeout. */
+        public boolean isFailure() {
+            return isCompleted() && conclusion != null
+                    && ("failure".equals(conclusion)
+                        || "cancelled".equals(conclusion)
+                        || "timed_out".equals(conclusion));
+        }
+    }
+
+    /**
+     * Result of a workflow dispatch containing the run ID and URLs.
+     */
+    public static class DispatchResult {
+        private final long runId;
+        private final String htmlUrl;
+
+        public DispatchResult(long runId, String htmlUrl) {
+            this.runId = runId;
+            this.htmlUrl = htmlUrl;
+        }
+
+        public long getRunId() {
+            return runId;
+        }
+
+        public String getHtmlUrl() {
+            return htmlUrl;
+        }
+    }
+
+    /**
      * Triggers a workflow_dispatch event on the specified repository and workflow
      * file.
      *
@@ -35,8 +90,9 @@ public class GitHubClient {
      * @param workflowFile the workflow filename (e.g. jenkins-agent.yml)
      * @param ref          git ref to run against (e.g. main)
      * @param inputs       key-value inputs forwarded to the workflow
+     * @return dispatch result containing the workflow run ID and URLs
      */
-    public void triggerWorkflow(String repository, String workflowFile, String ref,
+    public DispatchResult triggerWorkflow(String repository, String workflowFile, String ref,
             Map<String, String> inputs) throws IOException {
         String url = apiUrl + "/repos/" + repository + "/actions/workflows/" + workflowFile + "/dispatches";
         String body = buildJson(ref, inputs);
@@ -44,8 +100,10 @@ public class GitHubClient {
         IOException lastException = null;
         for (int attempt = 1; attempt <= 3; attempt++) {
             try {
-                doPost(url, body);
-                return;
+                String response = doPost(url, body);
+                long runId = extractLong(response, "workflow_run_id");
+                String htmlUrl = extractJsonString(response, "html_url");
+                return new DispatchResult(runId, htmlUrl);
             } catch (javax.net.ssl.SSLException e) {
                 lastException = e;
                 LOGGER.log(Level.WARNING, "Attempt {0}/3 failed with SSL error, retrying: {1}",
@@ -59,7 +117,7 @@ public class GitHubClient {
         throw lastException;
     }
 
-    private void doPost(String url, String body) throws IOException {
+    private String doPost(String url, String body) throws IOException {
         LOGGER.log(Level.INFO, "Dispatching workflow: POST {0}", url);
 
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
@@ -90,6 +148,44 @@ public class GitHubClient {
                         + " for workflow dispatch: " + error);
             }
             LOGGER.log(Level.INFO, "Workflow dispatch successful (HTTP {0})", status);
+            return new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        } finally {
+            conn.disconnect();
+        }
+    }
+
+    /**
+     * Gets the current status of a workflow run.
+     */
+    public WorkflowRunStatus getWorkflowRunStatus(String repository, long runId) throws IOException {
+        String url = apiUrl + "/repos/" + repository + "/actions/runs/" + runId;
+        String response = doGet(url);
+        String status = extractJsonString(response, "status");
+        String conclusion = extractJsonString(response, "conclusion");
+        return new WorkflowRunStatus(status, conclusion);
+    }
+
+    private String doGet(String url) throws IOException {
+        LOGGER.log(Level.FINE, "GET {0}", url);
+
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        try {
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(30_000);
+            conn.setReadTimeout(30_000);
+            conn.setRequestProperty("Authorization", "Bearer " + token);
+            conn.setRequestProperty("Accept", "application/vnd.github+json");
+            conn.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
+
+            int status = conn.getResponseCode();
+            if (status < 200 || status >= 300) {
+                InputStream errStream = conn.getErrorStream();
+                String error = errStream != null
+                        ? new String(errStream.readAllBytes(), StandardCharsets.UTF_8)
+                        : "(no response body)";
+                throw new IOException("GitHub API returned HTTP " + status + ": " + error);
+            }
+            return new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         } finally {
             conn.disconnect();
         }
@@ -98,6 +194,7 @@ public class GitHubClient {
     private static String buildJson(String ref, Map<String, String> inputs) {
         StringBuilder sb = new StringBuilder();
         sb.append("{\"ref\":\"").append(escapeJson(ref)).append("\"");
+        sb.append(",\"return_run_details\":true");
         if (inputs != null && !inputs.isEmpty()) {
             sb.append(",\"inputs\":{");
             boolean first = true;
@@ -125,5 +222,52 @@ public class GitHubClient {
                 .replace("\n", "\\n")
                 .replace("\r", "\\r")
                 .replace("\t", "\\t");
+    }
+
+    static long extractLong(String json, String key) {
+        String search = "\"" + key + "\":";
+        int idx = json.indexOf(search);
+        if (idx < 0) {
+            return -1;
+        }
+        int start = idx + search.length();
+        while (start < json.length() && Character.isWhitespace(json.charAt(start))) {
+            start++;
+        }
+        int end = start;
+        while (end < json.length() && (Character.isDigit(json.charAt(end)) || json.charAt(end) == '-')) {
+            end++;
+        }
+        if (start == end) {
+            return -1;
+        }
+        return Long.parseLong(json.substring(start, end));
+    }
+
+    static String extractJsonString(String json, String key) {
+        String search = "\"" + key + "\":";
+        int idx = json.indexOf(search);
+        if (idx < 0) {
+            return null;
+        }
+        int start = idx + search.length();
+        while (start < json.length() && Character.isWhitespace(json.charAt(start))) {
+            start++;
+        }
+        if (start >= json.length() || json.charAt(start) == 'n') {
+            return null;
+        }
+        if (json.charAt(start) != '"') {
+            return null;
+        }
+        start++;
+        int end = start;
+        while (end < json.length() && json.charAt(end) != '"') {
+            if (json.charAt(end) == '\\') {
+                end++;
+            }
+            end++;
+        }
+        return json.substring(start, end);
     }
 }

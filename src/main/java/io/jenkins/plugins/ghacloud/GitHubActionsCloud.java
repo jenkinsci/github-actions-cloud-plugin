@@ -15,6 +15,7 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.cloudstats.ProvisioningActivity;
+import org.jenkinsci.plugins.cloudstats.TrackedPlannedNode;
 import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -168,7 +169,7 @@ public class GitHubActionsCloud extends Cloud {
                 }
             });
 
-            plannedNodes.add(new NodeProvisioner.PlannedNode(agentName, future, template.getNumExecutors()));
+            plannedNodes.add(new TrackedPlannedNode(provisioningId, template.getNumExecutors(), future));
         }
 
         return plannedNodes;

@@ -148,8 +148,7 @@ public class GitHubClient {
                         + " for workflow dispatch: " + error);
             }
             LOGGER.log(Level.INFO, "Workflow dispatch successful (HTTP {0})", status);
-            InputStream in = conn.getInputStream();
-            return in != null ? new String(in.readAllBytes(), StandardCharsets.UTF_8) : "";
+            return new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         } finally {
             conn.disconnect();
         }
@@ -186,8 +185,7 @@ public class GitHubClient {
                         : "(no response body)";
                 throw new IOException("GitHub API returned HTTP " + status + ": " + error);
             }
-            InputStream in = conn.getInputStream();
-            return in != null ? new String(in.readAllBytes(), StandardCharsets.UTF_8) : "";
+            return new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         } finally {
             conn.disconnect();
         }

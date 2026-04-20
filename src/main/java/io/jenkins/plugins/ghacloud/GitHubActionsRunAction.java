@@ -41,6 +41,7 @@ public class GitHubActionsRunAction implements Action {
         return "github-actions-run";
     }
 
+    // lgtm[jenkins/no-permission-check] lgtm[jenkins/csrf] - read-only redirect to public GitHub URL, no side effects
     public HttpResponse doIndex() {
         return HttpResponses.redirectTo(url);
     }

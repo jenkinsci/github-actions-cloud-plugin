@@ -101,6 +101,7 @@ public class GitHubClient {
         for (int attempt = 1; attempt <= 3; attempt++) {
             try {
                 String response = doPost(url, body);
+                LOGGER.log(Level.FINE, "Dispatch response: {0}", response);
                 long runId = extractLong(response, "workflow_run_id");
                 String htmlUrl = extractJsonString(response, "html_url");
                 return new DispatchResult(runId, htmlUrl);
@@ -148,6 +149,9 @@ public class GitHubClient {
                         + " for workflow dispatch: " + error);
             }
             LOGGER.log(Level.INFO, "Workflow dispatch successful (HTTP {0})", status);
+            if (status == 204) {
+                return "";
+            }
             return new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         } finally {
             conn.disconnect();

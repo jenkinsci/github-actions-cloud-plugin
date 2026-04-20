@@ -8,17 +8,20 @@ import hudson.model.TaskListener;
 import hudson.slaves.AbstractCloudComputer;
 import hudson.slaves.AbstractCloudSlave;
 import hudson.slaves.JNLPLauncher;
+import org.jenkinsci.plugins.cloudstats.ProvisioningActivity;
+import org.jenkinsci.plugins.cloudstats.TrackedItem;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class GitHubActionsAgent extends AbstractCloudSlave {
+public class GitHubActionsAgent extends AbstractCloudSlave implements TrackedItem {
 
     private static final Logger LOGGER = Logger.getLogger(GitHubActionsAgent.class.getName());
 
     private final String cloudName;
+    private ProvisioningActivity.Id provisioningId;
 
     @DataBoundConstructor
     public GitHubActionsAgent(String name, String remoteFs, String labelString,
@@ -34,6 +37,15 @@ public class GitHubActionsAgent extends AbstractCloudSlave {
 
     public String getCloudName() {
         return cloudName;
+    }
+
+    public void setProvisioningId(ProvisioningActivity.Id provisioningId) {
+        this.provisioningId = provisioningId;
+    }
+
+    @Override
+    public ProvisioningActivity.Id getId() {
+        return provisioningId;
     }
 
     @Override

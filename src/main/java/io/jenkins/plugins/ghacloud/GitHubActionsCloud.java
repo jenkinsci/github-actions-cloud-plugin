@@ -14,6 +14,7 @@ import hudson.slaves.NodeProvisioner;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
+import org.jenkinsci.plugins.cloudstats.ProvisioningActivity;
 import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -155,9 +156,12 @@ public class GitHubActionsCloud extends Cloud {
 
             String agentName = name + "-" + UUID.randomUUID().toString().substring(0, 8);
 
+            ProvisioningActivity.Id provisioningId = new ProvisioningActivity.Id(
+                    this.name, template.getLabelString(), agentName);
+
             CompletableFuture<Node> future = CompletableFuture.supplyAsync(() -> {
                 try {
-                    return provisionAgent(agentName, template);
+                    return provisionAgent(agentName, template, provisioningId);
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to provision GitHub Actions agent: " + agentName, e);
                 }
@@ -169,7 +173,8 @@ public class GitHubActionsCloud extends Cloud {
         return plannedNodes;
     }
 
-    private GitHubActionsAgent provisionAgent(String agentName, GitHubActionsAgentTemplate template)
+    private GitHubActionsAgent provisionAgent(String agentName, GitHubActionsAgentTemplate template,
+                                                ProvisioningActivity.Id provisioningId)
             throws Descriptor.FormException, IOException {
         LOGGER.log(Level.FINE, "Provisioning GitHub Actions agent: {0}", agentName);
 
@@ -181,6 +186,7 @@ public class GitHubActionsCloud extends Cloud {
                 template.getIdleMinutes(),
                 name
         );
+        agent.setProvisioningId(provisioningId);
 
         Jenkins jenkins = Jenkins.get();
         jenkins.addNode(agent);

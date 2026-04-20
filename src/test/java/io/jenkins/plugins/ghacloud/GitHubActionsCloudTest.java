@@ -349,4 +349,116 @@ public class GitHubActionsCloudTest {
         GitHubClient client = new GitHubClient("https://api.github.com/", "token");
         assertNotNull(client);
     }
+
+    // --- WorkflowRunStatus tests ---
+
+    @Test
+    public void workflowRunStatusCompletedSuccess() {
+        GitHubClient.WorkflowRunStatus status = new GitHubClient.WorkflowRunStatus("completed", "success");
+        assertTrue(status.isCompleted());
+        assertFalse(status.isFailure());
+        assertEquals("completed", status.getStatus());
+        assertEquals("success", status.getConclusion());
+    }
+
+    @Test
+    public void workflowRunStatusFailure() {
+        GitHubClient.WorkflowRunStatus status = new GitHubClient.WorkflowRunStatus("completed", "failure");
+        assertTrue(status.isCompleted());
+        assertTrue(status.isFailure());
+    }
+
+    @Test
+    public void workflowRunStatusCancelled() {
+        GitHubClient.WorkflowRunStatus status = new GitHubClient.WorkflowRunStatus("completed", "cancelled");
+        assertTrue(status.isFailure());
+    }
+
+    @Test
+    public void workflowRunStatusTimedOut() {
+        GitHubClient.WorkflowRunStatus status = new GitHubClient.WorkflowRunStatus("completed", "timed_out");
+        assertTrue(status.isFailure());
+    }
+
+    @Test
+    public void workflowRunStatusInProgress() {
+        GitHubClient.WorkflowRunStatus status = new GitHubClient.WorkflowRunStatus("in_progress", null);
+        assertFalse(status.isCompleted());
+        assertFalse(status.isFailure());
+    }
+
+    @Test
+    public void workflowRunStatusQueued() {
+        GitHubClient.WorkflowRunStatus status = new GitHubClient.WorkflowRunStatus("queued", null);
+        assertFalse(status.isCompleted());
+        assertFalse(status.isFailure());
+    }
+
+    // --- JSON extraction tests ---
+
+    @Test
+    public void extractLongFromJson() {
+        String json = "{\"workflow_run_id\":12345,\"run_url\":\"https://example.com\"}";
+        assertEquals(12345L, GitHubClient.extractLong(json, "workflow_run_id"));
+    }
+
+    @Test
+    public void extractLongMissingKey() {
+        assertEquals(-1L, GitHubClient.extractLong("{\"other\":1}", "workflow_run_id"));
+    }
+
+    @Test
+    public void extractLongWithWhitespace() {
+        String json = "{\"workflow_run_id\": 67890}";
+        assertEquals(67890L, GitHubClient.extractLong(json, "workflow_run_id"));
+    }
+
+    @Test
+    public void extractJsonStringValue() {
+        String json = "{\"status\":\"completed\",\"conclusion\":\"failure\"}";
+        assertEquals("completed", GitHubClient.extractJsonString(json, "status"));
+        assertEquals("failure", GitHubClient.extractJsonString(json, "conclusion"));
+    }
+
+    @Test
+    public void extractJsonStringNull() {
+        String json = "{\"status\":\"in_progress\",\"conclusion\":null}";
+        assertEquals("in_progress", GitHubClient.extractJsonString(json, "status"));
+        assertNull(GitHubClient.extractJsonString(json, "conclusion"));
+    }
+
+    @Test
+    public void extractJsonStringMissingKey() {
+        assertNull(GitHubClient.extractJsonString("{\"other\":\"value\"}", "status"));
+    }
+
+    // --- Agent workflow run ID tests ---
+
+    @Test
+    public void agentWorkflowRunId(JenkinsRule j) throws Exception {
+        GitHubActionsAgent agent = new GitHubActionsAgent(
+                "test-agent", "/tmp/agent", "gha-linux", 1, 5, "my-cloud");
+        assertEquals(0L, agent.getWorkflowRunId());
+        agent.setWorkflowRunId(12345L);
+        assertEquals(12345L, agent.getWorkflowRunId());
+    }
+
+    @Test
+    public void agentWorkflowRunUrl(JenkinsRule j) throws Exception {
+        GitHubActionsAgent agent = new GitHubActionsAgent(
+                "test-agent", "/tmp/agent", "gha-linux", 1, 5, "my-cloud");
+        assertNull(agent.getWorkflowRunUrl());
+        agent.setWorkflowRunUrl("https://github.com/myorg/myrepo/actions/runs/12345");
+        assertEquals("https://github.com/myorg/myrepo/actions/runs/12345", agent.getWorkflowRunUrl());
+    }
+
+    // --- DispatchResult tests ---
+
+    @Test
+    public void dispatchResultFields() {
+        GitHubClient.DispatchResult result = new GitHubClient.DispatchResult(
+                42L, "https://github.com/org/repo/actions/runs/42");
+        assertEquals(42L, result.getRunId());
+        assertEquals("https://github.com/org/repo/actions/runs/42", result.getHtmlUrl());
+    }
 }

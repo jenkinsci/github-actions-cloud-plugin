@@ -22,6 +22,8 @@ public class GitHubActionsAgent extends AbstractCloudSlave implements TrackedIte
 
     private final String cloudName;
     private ProvisioningActivity.Id provisioningId;
+    private long workflowRunId;
+    private String workflowRunUrl;
 
     @DataBoundConstructor
     public GitHubActionsAgent(String name, String remoteFs, String labelString,
@@ -37,6 +39,22 @@ public class GitHubActionsAgent extends AbstractCloudSlave implements TrackedIte
 
     public String getCloudName() {
         return cloudName;
+    }
+
+    public long getWorkflowRunId() {
+        return workflowRunId;
+    }
+
+    public void setWorkflowRunId(long workflowRunId) {
+        this.workflowRunId = workflowRunId;
+    }
+
+    public String getWorkflowRunUrl() {
+        return workflowRunUrl;
+    }
+
+    public void setWorkflowRunUrl(String workflowRunUrl) {
+        this.workflowRunUrl = workflowRunUrl;
     }
 
     public void setProvisioningId(ProvisioningActivity.Id provisioningId) {

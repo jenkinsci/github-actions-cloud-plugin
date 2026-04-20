@@ -4,7 +4,9 @@ import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.slaves.AbstractCloudComputer;
 import hudson.slaves.AbstractCloudSlave;
+import hudson.slaves.Cloud;
 import hudson.slaves.RetentionStrategy;
+import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
@@ -30,6 +32,11 @@ public class GitHubActionsRetentionStrategy extends RetentionStrategy<AbstractCl
     public long check(AbstractCloudComputer<?> c) {
         // Don't terminate agents that haven't connected yet — they're still starting up
         if (c.isOffline() && c.getConnectTime() == 0) {
+            // Check if the GitHub Actions workflow has failed
+            if (checkWorkflowFailed(c)) {
+                return 1;
+            }
+
             // Check if we've been waiting too long for connection (10 min max)
             long createdMs = System.currentTimeMillis() - c.getIdleStartMilliseconds();
             if (createdMs > 10L * 60 * 1000) {
@@ -63,6 +70,39 @@ public class GitHubActionsRetentionStrategy extends RetentionStrategy<AbstractCl
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Failed to terminate agent " + c.getName(), e);
         }
+    }
+
+    private boolean checkWorkflowFailed(AbstractCloudComputer<?> c) {
+        AbstractCloudSlave node = (AbstractCloudSlave) c.getNode();
+        if (!(node instanceof GitHubActionsAgent)) {
+            return false;
+        }
+        GitHubActionsAgent agent = (GitHubActionsAgent) node;
+        if (agent.getWorkflowRunId() <= 0) {
+            return false;
+        }
+        Cloud cloud = Jenkins.get().getCloud(agent.getCloudName());
+        if (!(cloud instanceof GitHubActionsCloud)) {
+            return false;
+        }
+        GitHubActionsCloud ghaCloud = (GitHubActionsCloud) cloud;
+        try {
+            GitHubClient client = new GitHubClient(
+                    ghaCloud.getGitHubApiUrl(), ghaCloud.resolveGitHubToken());
+            GitHubClient.WorkflowRunStatus status = client.getWorkflowRunStatus(
+                    ghaCloud.getRepository(), agent.getWorkflowRunId());
+            if (status.isFailure()) {
+                LOGGER.log(Level.WARNING,
+                        "GitHub Actions workflow run {0} for agent {1} concluded with: {2}",
+                        new Object[]{agent.getWorkflowRunId(), c.getName(), status.getConclusion()});
+                terminateAgent(c);
+                return true;
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.FINE,
+                    "Failed to check workflow run status for agent " + c.getName(), e);
+        }
+        return false;
     }
 
     @Override

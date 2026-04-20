@@ -31,7 +31,6 @@ Jenkins controller                     GitHub Actions
 
 ## Requirements
 
-- Jenkins 2.462.3 or newer
 - A GitHub repository with a workflow file that accepts `jenkins_url`, `agent_name`, and `agent_secret` inputs
 - A GitHub Personal Access Token (PAT) with `actions:write` scope, stored as a **Secret Text** credential in Jenkins
 - Jenkins must be reachable from GitHub Actions runners (public URL, tunnel, or self-hosted runners)
@@ -40,7 +39,7 @@ Jenkins controller                     GitHub Actions
 
 ### 1. Add the workflow to your GitHub repository
 
-Copy one (or both) of the sample workflows into your repository at `.github/workflows/`:
+Copy one of the sample workflows into your repository at `.github/workflows/`:
 
 **Linux** (`jenkins-agent.yml`):
 
@@ -65,11 +64,15 @@ jobs:
     timeout-minutes: 360
     steps:
       - name: Mask secret
-        run: echo "::add-mask::${{ inputs.agent_secret }}"
+        run: |
+          secret=$(jq -r '.inputs.agent_secret' "$GITHUB_EVENT_PATH")
+          echo "::add-mask::$secret"
+
       - name: Download Jenkins agent JAR
         run: |
           curl -sSfL --retry 3 --retry-delay 5 -o agent.jar \
             "${{ inputs.jenkins_url }}jnlpJars/agent.jar"
+
       - name: Connect to Jenkins
         env:
           AGENT_SECRET: ${{ inputs.agent_secret }}

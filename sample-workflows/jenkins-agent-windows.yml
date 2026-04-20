@@ -32,7 +32,10 @@ jobs:
 
     steps:
       - name: Mask secret
-        run: Write-Output "::add-mask::${{ inputs.agent_secret }}"
+        shell: bash
+        run: |
+          secret=$(jq -r '.inputs.agent_secret' "$GITHUB_EVENT_PATH")
+          echo "::add-mask::$secret"
 
       - name: Download Jenkins agent JAR
         run: |

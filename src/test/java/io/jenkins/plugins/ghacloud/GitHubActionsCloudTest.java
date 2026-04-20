@@ -179,6 +179,7 @@ public class GitHubActionsCloudTest {
         assertEquals(5, template.getIdleMinutes());
         assertEquals(0, template.getMaxAgents());
         assertNull(template.getWorkflowFileName());
+        assertNull(template.getNamePrefix());
     }
 
     @Test
@@ -190,6 +191,7 @@ public class GitHubActionsCloudTest {
         template.setIdleMinutes(10);
         template.setWorkflowFileName("custom.yml");
         template.setMaxAgents(5);
+        template.setNamePrefix("linux-builder");
 
         assertEquals("/custom/path", template.getRemoteFs());
         assertEquals(4, template.getNumExecutors());
@@ -197,6 +199,7 @@ public class GitHubActionsCloudTest {
         assertEquals(10, template.getIdleMinutes());
         assertEquals("custom.yml", template.getWorkflowFileName());
         assertEquals(5, template.getMaxAgents());
+        assertEquals("linux-builder", template.getNamePrefix());
     }
 
     @Test
@@ -226,6 +229,15 @@ public class GitHubActionsCloudTest {
 
         template.setIdleMinutes(-1);
         assertEquals(5, template.getIdleMinutes());
+
+        template.setNamePrefix("");
+        assertNull(template.getNamePrefix());
+
+        template.setNamePrefix(null);
+        assertNull(template.getNamePrefix());
+
+        template.setNamePrefix("  ");
+        assertNull(template.getNamePrefix());
     }
 
     // --- Agent tests ---

@@ -24,6 +24,7 @@ public class GitHubActionsAgentTemplate implements Describable<GitHubActionsAgen
     private int idleMinutes = 5;
     private String workflowFileName;
     private int maxAgents;
+    private String namePrefix;
 
     @DataBoundConstructor
     public GitHubActionsAgentTemplate(String labelString) {
@@ -86,6 +87,15 @@ public class GitHubActionsAgentTemplate implements Describable<GitHubActionsAgen
     @DataBoundSetter
     public void setMaxAgents(int maxAgents) {
         this.maxAgents = maxAgents;
+    }
+
+    public String getNamePrefix() {
+        return namePrefix;
+    }
+
+    @DataBoundSetter
+    public void setNamePrefix(String namePrefix) {
+        this.namePrefix = (namePrefix != null && !namePrefix.trim().isEmpty()) ? namePrefix.trim() : null;
     }
 
     public boolean matches(Label label) {

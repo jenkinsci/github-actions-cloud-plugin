@@ -154,7 +154,8 @@ public class GitHubActionsCloud extends Cloud {
                 }
             }
 
-            String agentName = name + "-" + UUID.randomUUID().toString().substring(0, 8);
+            String prefix = (template.getNamePrefix() != null) ? template.getNamePrefix() : name;
+            String agentName = prefix + "-" + UUID.randomUUID().toString().substring(0, 8);
 
             ProvisioningActivity.Id provisioningId = new ProvisioningActivity.Id(
                     this.name, template.getLabelString(), agentName);

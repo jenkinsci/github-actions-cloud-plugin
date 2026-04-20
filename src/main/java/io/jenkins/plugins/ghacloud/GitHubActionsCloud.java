@@ -153,7 +153,8 @@ public class GitHubActionsCloud extends Cloud {
                 }
             }
 
-            String agentName = name + "-" + UUID.randomUUID().toString().substring(0, 8);
+            String prefix = (template.getNamePrefix() != null) ? template.getNamePrefix() : name;
+            String agentName = prefix + "-" + UUID.randomUUID().toString().substring(0, 8);
 
             CompletableFuture<Node> future = CompletableFuture.supplyAsync(() -> {
                 try {

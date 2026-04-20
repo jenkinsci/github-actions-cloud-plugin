@@ -128,11 +128,13 @@ Create a Jenkins job with the **Restrict where this project can be run** option 
 | Field | Description |
 |-------|-------------|
 | Labels | Jenkins labels to match against |
+| Agent Name Prefix | Custom prefix for agent names (e.g., `linux-builder` → `linux-builder-2de45c6b`). Defaults to the cloud name if left blank. |
 | Remote FS Root | Agent working directory |
 | Number of Executors | Executors per agent (default: 1) |
 | Git Ref | Branch/tag to run the workflow against (default: `main`) |
 | Idle Termination Minutes | Minutes idle before termination |
 | Workflow File Name | Workflow file to trigger (e.g., `jenkins-agent.yml`) |
+| Max Number of Agents | Maximum concurrent agents from this template (0 = unlimited) |
 
 ## Development
 

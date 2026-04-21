@@ -103,6 +103,7 @@ jobs:
    - **Credentials**: select the PAT credential
    - **Max Number of Agents**: limit concurrent agents (0 = unlimited)
 4. Add one or more **Agent Templates**:
+   - **Template Name**: unique name for this template (e.g., `linux-builder`). Used as the agent name prefix and shown in Cloud Statistics.
    - **Labels**: e.g., `gha-linux`
    - **Remote FS Root**: `/home/runner/agent`
    - **Workflow File Name**: e.g., `jenkins-agent.yml`
@@ -128,8 +129,8 @@ Create a Jenkins job with the **Restrict where this project can be run** option 
 
 | Field | Description |
 |-------|-------------|
+| Template Name | Required. Unique name for this template (e.g., `linux-builder`). Used as the agent name prefix (e.g., `linux-builder-2de45c6b`) and displayed in Cloud Statistics. |
 | Labels | Jenkins labels to match against |
-| Agent Name Prefix | Custom prefix for agent names (e.g., `linux-builder` → `linux-builder-2de45c6b`). Defaults to the cloud name if left blank. |
 | Remote FS Root | Agent working directory |
 | Number of Executors | Executors per agent (default: 1) |
 | Git Ref | Branch/tag to run the workflow against (default: `main`) |

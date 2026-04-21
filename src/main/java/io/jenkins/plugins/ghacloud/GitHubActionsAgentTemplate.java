@@ -21,7 +21,7 @@ public class GitHubActionsAgentTemplate implements Describable<GitHubActionsAgen
     private String labelString;
     /** Retained for migration only — populated when deserializing old XML that had namePrefix. */
     @SuppressWarnings("unused")
-    private transient String namePrefix;
+    private String namePrefix;
     private String remoteFs = "/home/runner/agent";
     private int numExecutors = 1;
     private String gitRef = "main";
@@ -31,7 +31,10 @@ public class GitHubActionsAgentTemplate implements Describable<GitHubActionsAgen
 
     @DataBoundConstructor
     public GitHubActionsAgentTemplate(String templateName, String labelString) {
-        this.templateName = (templateName != null && !templateName.trim().isEmpty()) ? templateName.trim() : null;
+        if (templateName == null || templateName.trim().isEmpty()) {
+            throw new IllegalArgumentException("templateName must not be blank");
+        }
+        this.templateName = templateName.trim();
         this.labelString = labelString;
     }
 

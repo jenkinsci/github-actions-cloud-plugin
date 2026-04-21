@@ -1,8 +1,10 @@
 package io.jenkins.plugins.ghacloud;
 
+import com.thoughtworks.xstream.XStream;
 import hudson.model.Label;
 import hudson.model.Node;
 import hudson.util.FormValidation;
+import hudson.util.XStream2;
 import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
@@ -15,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class GitHubActionsCloudTest {
 
     private GitHubActionsAgentTemplate createTemplate(String labels, String workflowFile) {
-        GitHubActionsAgentTemplate t = new GitHubActionsAgentTemplate(labels);
+        GitHubActionsAgentTemplate t = new GitHubActionsAgentTemplate("test-template", labels);
         t.setWorkflowFileName(workflowFile);
         return t;
     }
@@ -159,39 +161,38 @@ public class GitHubActionsCloudTest {
 
     @Test
     public void templateEmptyLabelsDoNotMatchLabel(JenkinsRule j) {
-        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate("");
+        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate("my-template", "");
         assertFalse(template.matches(Label.get("anything")));
     }
 
     @Test
     public void templateNullLabelsDoNotMatchLabel(JenkinsRule j) {
-        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate(null);
+        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate("my-template", null);
         assertFalse(template.matches(Label.get("anything")));
     }
 
     @Test
     public void templateDefaults() {
-        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate("test");
+        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate("my-template", "gha-linux");
 
+        assertEquals("my-template", template.getTemplateName());
         assertEquals("/home/runner/agent", template.getRemoteFs());
         assertEquals(1, template.getNumExecutors());
         assertEquals("main", template.getGitRef());
         assertEquals(5, template.getIdleMinutes());
         assertEquals(0, template.getMaxAgents());
         assertNull(template.getWorkflowFileName());
-        assertNull(template.getNamePrefix());
     }
 
     @Test
     public void templateSetters() {
-        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate("test");
+        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate("my-template", "gha-linux");
         template.setRemoteFs("/custom/path");
         template.setNumExecutors(4);
         template.setGitRef("develop");
         template.setIdleMinutes(10);
         template.setWorkflowFileName("custom.yml");
         template.setMaxAgents(5);
-        template.setNamePrefix("linux-builder");
 
         assertEquals("/custom/path", template.getRemoteFs());
         assertEquals(4, template.getNumExecutors());
@@ -199,12 +200,11 @@ public class GitHubActionsCloudTest {
         assertEquals(10, template.getIdleMinutes());
         assertEquals("custom.yml", template.getWorkflowFileName());
         assertEquals(5, template.getMaxAgents());
-        assertEquals("linux-builder", template.getNamePrefix());
     }
 
     @Test
     public void templateSettersHandleInvalidValues() {
-        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate("test");
+        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate("my-template", "gha-linux");
 
         template.setRemoteFs("");
         assertEquals("/home/runner/agent", template.getRemoteFs());
@@ -229,15 +229,6 @@ public class GitHubActionsCloudTest {
 
         template.setIdleMinutes(-1);
         assertEquals(5, template.getIdleMinutes());
-
-        template.setNamePrefix("");
-        assertNull(template.getNamePrefix());
-
-        template.setNamePrefix(null);
-        assertNull(template.getNamePrefix());
-
-        template.setNamePrefix("  ");
-        assertNull(template.getNamePrefix());
     }
 
     // --- Agent tests ---
@@ -304,6 +295,14 @@ public class GitHubActionsCloudTest {
         assertEquals(FormValidation.Kind.ERROR, descriptor.doCheckRepository("noslash").kind);
         assertEquals(FormValidation.Kind.ERROR, descriptor.doCheckRepository("too/many/parts").kind);
         assertEquals(FormValidation.Kind.OK, descriptor.doCheckRepository("owner/repo").kind);
+    }
+
+    @Test
+    public void templateDescriptorValidatesTemplateName(JenkinsRule j) {
+        GitHubActionsAgentTemplate.DescriptorImpl descriptor = new GitHubActionsAgentTemplate.DescriptorImpl();
+        assertEquals(FormValidation.Kind.ERROR, descriptor.doCheckTemplateName("").kind);
+        assertEquals(FormValidation.Kind.ERROR, descriptor.doCheckTemplateName(null).kind);
+        assertEquals(FormValidation.Kind.OK, descriptor.doCheckTemplateName("linux-builder").kind);
     }
 
     @Test
@@ -450,6 +449,73 @@ public class GitHubActionsCloudTest {
         assertNull(agent.getWorkflowRunUrl());
         agent.setWorkflowRunUrl("https://github.com/myorg/myrepo/actions/runs/12345");
         assertEquals("https://github.com/myorg/myrepo/actions/runs/12345", agent.getWorkflowRunUrl());
+    }
+
+    // --- readResolve migration tests ---
+
+    @Test
+    public void migrationFallsBackToNamePrefix() {
+        String xml = "<io.jenkins.plugins.ghacloud.GitHubActionsAgentTemplate>" +
+                     "<namePrefix>my-prefix</namePrefix>" +
+                     "<labelString>gha-linux</labelString>" +
+                     "</io.jenkins.plugins.ghacloud.GitHubActionsAgentTemplate>";
+        XStream2 xs = new XStream2();
+        GitHubActionsAgentTemplate t = (GitHubActionsAgentTemplate) xs.fromXML(xml);
+        assertEquals("my-prefix", t.getTemplateName());
+        assertEquals("gha-linux", t.getLabelString());
+    }
+
+    @Test
+    public void migrationFallsBackToLabelString() {
+        String xml = "<io.jenkins.plugins.ghacloud.GitHubActionsAgentTemplate>" +
+                     "<labelString>gha-linux</labelString>" +
+                     "</io.jenkins.plugins.ghacloud.GitHubActionsAgentTemplate>";
+        XStream2 xs = new XStream2();
+        GitHubActionsAgentTemplate t = (GitHubActionsAgentTemplate) xs.fromXML(xml);
+        assertEquals("gha-linux", t.getTemplateName());
+    }
+
+    @Test
+    public void migrationFallsBackToDefaultWhenBothEmpty() {
+        String xml = "<io.jenkins.plugins.ghacloud.GitHubActionsAgentTemplate>" +
+                     "<labelString></labelString>" +
+                     "</io.jenkins.plugins.ghacloud.GitHubActionsAgentTemplate>";
+        XStream2 xs = new XStream2();
+        GitHubActionsAgentTemplate t = (GitHubActionsAgentTemplate) xs.fromXML(xml);
+        assertEquals("template", t.getTemplateName());
+    }
+
+    @Test
+    public void migrationPrefersNamePrefixOverLabelString() {
+        String xml = "<io.jenkins.plugins.ghacloud.GitHubActionsAgentTemplate>" +
+                     "<namePrefix>explicit-prefix</namePrefix>" +
+                     "<labelString>gha-linux docker</labelString>" +
+                     "</io.jenkins.plugins.ghacloud.GitHubActionsAgentTemplate>";
+        XStream2 xs = new XStream2();
+        GitHubActionsAgentTemplate t = (GitHubActionsAgentTemplate) xs.fromXML(xml);
+        assertEquals("explicit-prefix", t.getTemplateName());
+    }
+
+    @Test
+    public void existingTemplateNamePreservedDuringMigration() {
+        String xml = "<io.jenkins.plugins.ghacloud.GitHubActionsAgentTemplate>" +
+                     "<templateName>already-set</templateName>" +
+                     "<namePrefix>old-prefix</namePrefix>" +
+                     "<labelString>gha-linux</labelString>" +
+                     "</io.jenkins.plugins.ghacloud.GitHubActionsAgentTemplate>";
+        XStream2 xs = new XStream2();
+        GitHubActionsAgentTemplate t = (GitHubActionsAgentTemplate) xs.fromXML(xml);
+        assertEquals("already-set", t.getTemplateName());
+    }
+
+    @Test
+    public void constructorRejectsBlankTemplateName() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new GitHubActionsAgentTemplate("", "gha-linux"));
+        assertThrows(IllegalArgumentException.class,
+                () -> new GitHubActionsAgentTemplate("  ", "gha-linux"));
+        assertThrows(IllegalArgumentException.class,
+                () -> new GitHubActionsAgentTemplate(null, "gha-linux"));
     }
 
     // --- DispatchResult tests ---

@@ -17,18 +17,46 @@ import hudson.model.Describable;
 
 public class GitHubActionsAgentTemplate implements Describable<GitHubActionsAgentTemplate> {
 
+    private String templateName;
     private String labelString;
+    /** Retained for migration only — populated when deserializing old XML that had namePrefix. */
+    @SuppressWarnings("unused")
+    private String namePrefix;
     private String remoteFs = "/home/runner/agent";
     private int numExecutors = 1;
     private String gitRef = "main";
     private int idleMinutes = 5;
     private String workflowFileName;
     private int maxAgents;
-    private String namePrefix;
 
     @DataBoundConstructor
-    public GitHubActionsAgentTemplate(String labelString) {
+    public GitHubActionsAgentTemplate(String templateName, String labelString) {
+        if (templateName == null || templateName.trim().isEmpty()) {
+            throw new IllegalArgumentException("templateName must not be blank");
+        }
+        this.templateName = templateName.trim();
         this.labelString = labelString;
+    }
+
+    /**
+     * Migration: when loading old XML that has no {@code templateName}, fall back to
+     * {@code namePrefix} (the old field) first, then to the label string.
+     */
+    private Object readResolve() {
+        if (templateName == null || templateName.trim().isEmpty()) {
+            if (namePrefix != null && !namePrefix.trim().isEmpty()) {
+                templateName = namePrefix.trim();
+            } else if (labelString != null && !labelString.trim().isEmpty()) {
+                templateName = labelString.trim();
+            } else {
+                templateName = "template";
+            }
+        }
+        return this;
+    }
+
+    public String getTemplateName() {
+        return templateName;
     }
 
     public String getLabelString() {
@@ -89,15 +117,6 @@ public class GitHubActionsAgentTemplate implements Describable<GitHubActionsAgen
         this.maxAgents = maxAgents;
     }
 
-    public String getNamePrefix() {
-        return namePrefix;
-    }
-
-    @DataBoundSetter
-    public void setNamePrefix(String namePrefix) {
-        this.namePrefix = (namePrefix != null && !namePrefix.trim().isEmpty()) ? namePrefix.trim() : null;
-    }
-
     public boolean matches(Label label) {
         if (label == null) {
             return true;
@@ -127,6 +146,15 @@ public class GitHubActionsAgentTemplate implements Describable<GitHubActionsAgen
         @Override
         public String getDisplayName() {
             return "GitHub Actions Agent Template";
+        }
+
+        @RequirePOST
+        public FormValidation doCheckTemplateName(@QueryParameter String value) {
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+            if (value == null || value.trim().isEmpty()) {
+                return FormValidation.error("Template name is required");
+            }
+            return FormValidation.ok();
         }
 
         @RequirePOST

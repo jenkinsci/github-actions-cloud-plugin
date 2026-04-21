@@ -1,6 +1,10 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
 
+    <f:entry title="${%Template Name}" field="templateName">
+        <f:textbox clazz="required" />
+    </f:entry>
+
     <f:entry title="${%Labels}" field="labelString">
         <f:textbox />
     </f:entry>
@@ -23,10 +27,6 @@
 
     <f:entry title="${%Workflow File Name}" field="workflowFileName">
         <f:textbox clazz="required" placeholder="jenkins-agent.yml" />
-    </f:entry>
-
-    <f:entry title="${%Agent Name Prefix}" field="namePrefix">
-        <f:textbox placeholder="(defaults to cloud name)" />
     </f:entry>
 
     <f:entry title="${%Max Number of Agents}" field="maxAgents">

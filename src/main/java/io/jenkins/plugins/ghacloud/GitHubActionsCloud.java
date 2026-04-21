@@ -149,17 +149,16 @@ public class GitHubActionsCloud extends Cloud {
                         .count();
                 if (templateAgentCount >= template.getMaxAgents()) {
                     LOGGER.log(Level.FINE,
-                            "Template max agents ({0}) reached for template with labels ''{1}'', skipping",
-                            new Object[]{template.getMaxAgents(), template.getLabelString()});
+                            "Template max agents ({0}) reached for template ''{1}'', skipping",
+                            new Object[]{template.getMaxAgents(), template.getTemplateName()});
                     break;
                 }
             }
 
-            String prefix = (template.getNamePrefix() != null) ? template.getNamePrefix() : name;
-            String agentName = prefix + "-" + UUID.randomUUID().toString().substring(0, 8);
+            String agentName = template.getTemplateName() + "-" + UUID.randomUUID().toString().substring(0, 8);
 
             ProvisioningActivity.Id provisioningId = new ProvisioningActivity.Id(
-                    this.name, template.getLabelString(), agentName);
+                    this.name, template.getTemplateName(), agentName);
 
             CompletableFuture<Node> future = CompletableFuture.supplyAsync(() -> {
                 try {

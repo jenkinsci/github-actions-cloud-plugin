@@ -1,6 +1,5 @@
 package io.jenkins.plugins.ghacloud;
 
-import com.thoughtworks.xstream.XStream;
 import hudson.model.Label;
 import hudson.model.Node;
 import hudson.util.FormValidation;

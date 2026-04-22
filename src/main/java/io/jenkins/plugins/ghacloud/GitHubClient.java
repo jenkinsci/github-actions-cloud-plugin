@@ -169,6 +169,92 @@ public class GitHubClient {
         return new WorkflowRunStatus(status, conclusion);
     }
 
+    /**
+     * Updates the display name of a workflow run.
+     */
+    public void updateWorkflowRunName(String repository, long runId, String name) throws IOException {
+        String url = apiUrl + "/repos/" + repository + "/actions/runs/" + runId;
+        String body = "{\"name\":\"" + escapeJson(name) + "\"}";
+        doPatch(url, body);
+    }
+
+    /**
+     * Creates a notice annotation on a workflow run by posting a check run
+     * with an annotation output.
+     *
+     * @param repository owner/repo
+     * @param runId      the workflow run ID
+     * @param message    annotation message
+     * @param buildUrl   link back to the Jenkins build
+     */
+    public void createWorkflowAnnotation(String repository, long runId, String message, String buildUrl)
+            throws IOException {
+        // First, get the head_sha from the workflow run
+        String runUrl = apiUrl + "/repos/" + repository + "/actions/runs/" + runId;
+        String runResponse = doGet(runUrl);
+        String headSha = extractJsonString(runResponse, "head_sha");
+        if (headSha == null || headSha.isEmpty()) {
+            LOGGER.log(Level.WARNING, "Could not get head_sha for workflow run {0}", runId);
+            return;
+        }
+
+        // Create a check run with a notice annotation
+        String url = apiUrl + "/repos/" + repository + "/check-runs";
+        String summary = buildUrl.isEmpty() ? message : "[" + message + "](" + escapeJson(buildUrl) + ")";
+        String body = "{\"name\":\"Jenkins Build\","
+                + "\"head_sha\":\"" + escapeJson(headSha) + "\","
+                + "\"status\":\"completed\","
+                + "\"conclusion\":\"neutral\","
+                + "\"output\":{"
+                + "\"title\":\"" + escapeJson(message) + "\","
+                + "\"summary\":\"" + escapeJson(summary) + "\","
+                + "\"annotations\":[{"
+                + "\"path\":\".github/workflows\","
+                + "\"start_line\":1,"
+                + "\"end_line\":1,"
+                + "\"annotation_level\":\"notice\","
+                + "\"message\":\"" + escapeJson(message) + "\","
+                + "\"title\":\"Jenkins Build\""
+                + "}]}}";
+        doPost(url, body);
+    }
+
+    private String doPatch(String url, String body) throws IOException {
+        LOGGER.log(Level.FINE, "PATCH {0}", url);
+
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        try {
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("X-HTTP-Method-Override", "PATCH");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(30_000);
+            conn.setReadTimeout(30_000);
+            conn.setRequestProperty("Authorization", "Bearer " + token);
+            conn.setRequestProperty("Accept", "application/vnd.github+json");
+            conn.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
+            conn.setRequestProperty("Content-Type", "application/json");
+
+            byte[] payload = body.getBytes(StandardCharsets.UTF_8);
+            conn.setFixedLengthStreamingMode(payload.length);
+
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(payload);
+            }
+
+            int status = conn.getResponseCode();
+            if (status < 200 || status >= 300) {
+                InputStream errStream = conn.getErrorStream();
+                String error = errStream != null
+                        ? new String(errStream.readAllBytes(), StandardCharsets.UTF_8)
+                        : "(no response body)";
+                throw new IOException("PATCH " + url + " returned HTTP " + status + ": " + error);
+            }
+            return new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        } finally {
+            conn.disconnect();
+        }
+    }
+
     private String doGet(String url) throws IOException {
         LOGGER.log(Level.FINE, "GET {0}", url);
 

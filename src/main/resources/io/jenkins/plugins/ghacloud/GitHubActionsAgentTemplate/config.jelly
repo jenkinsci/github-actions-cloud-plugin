@@ -1,5 +1,7 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:st="jelly:stapler">
+
+    <st:adjunct includes="io.jenkins.plugins.ghacloud.GitHubActionsAgentTemplate.config" />
 
     <f:entry title="${%Template Name}" field="templateName">
         <f:textbox clazz="required" />
@@ -19,6 +21,10 @@
 
     <f:entry title="${%Git Ref}" field="gitRef">
         <f:textbox default="main" />
+    </f:entry>
+
+    <f:entry title="${%One-Shot Agent}" field="oneShot">
+        <f:checkbox />
     </f:entry>
 
     <f:entry title="${%Idle Termination Minutes}" field="idleMinutes">

@@ -179,13 +179,16 @@ public class GitHubActionsCloud extends Cloud {
             throws Descriptor.FormException, IOException {
         LOGGER.log(Level.FINE, "Provisioning GitHub Actions agent: {0}", agentName);
 
+        int idleMinutes = template.isOneShot() ? 1 : template.getIdleMinutes();
+
         GitHubActionsAgent agent = new GitHubActionsAgent(
                 agentName,
                 template.getRemoteFs(),
                 template.getLabelString(),
                 template.getNumExecutors(),
-                template.getIdleMinutes(),
-                name
+                idleMinutes,
+                name,
+                template.isOneShot()
         );
         agent.setProvisioningId(provisioningId);
 

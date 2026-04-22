@@ -77,7 +77,7 @@ jobs:
         env:
           AGENT_SECRET: ${{ inputs.agent_secret }}
         run: |
-          java -jar agent.jar \
+          "$JAVA_HOME_21_X64/bin/java" -jar agent.jar \
             -url "${{ inputs.jenkins_url }}" \
             -secret "$AGENT_SECRET" \
             -name "${{ inputs.agent_name }}" \
@@ -134,7 +134,8 @@ Create a Jenkins job with the **Restrict where this project can be run** option 
 | Remote FS Root | Agent working directory |
 | Number of Executors | Executors per agent (default: 1) |
 | Git Ref | Branch/tag to run the workflow against (default: `main`) |
-| Idle Termination Minutes | Minutes idle before termination |
+| One-Shot Agent | When enabled, the agent is terminated immediately after completing a single build. Prevents workflow reuse across jobs. Overrides Idle Termination Minutes. |
+| Idle Termination Minutes | Minutes idle before termination (ignored when One-Shot is enabled) |
 | Workflow File Name | Workflow file to trigger (e.g., `jenkins-agent.yml`) |
 | Max Number of Agents | Maximum concurrent agents from this template (0 = unlimited) |
 

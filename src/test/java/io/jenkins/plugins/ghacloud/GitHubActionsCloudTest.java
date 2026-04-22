@@ -235,7 +235,7 @@ public class GitHubActionsCloudTest {
     @Test
     public void agentCreation(JenkinsRule j) throws Exception {
         GitHubActionsAgent agent = new GitHubActionsAgent(
-                "test-agent", "/tmp/agent", "gha-linux", 1, 5, "my-cloud");
+                "test-agent", "/tmp/agent", "gha-linux", 1, 5, "my-cloud", false);
 
         assertEquals("test-agent", agent.getNodeName());
         assertEquals("/tmp/agent", agent.getRemoteFS());
@@ -247,7 +247,7 @@ public class GitHubActionsCloudTest {
     @Test
     public void agentCreatesComputer(JenkinsRule j) throws Exception {
         GitHubActionsAgent agent = new GitHubActionsAgent(
-                "test-agent", "/tmp/agent", "gha-linux", 1, 5, "my-cloud");
+                "test-agent", "/tmp/agent", "gha-linux", 1, 5, "my-cloud", false);
 
         assertNotNull(agent.createComputer());
         assertTrue(agent.createComputer() instanceof GitHubActionsComputer);
@@ -263,16 +263,16 @@ public class GitHubActionsCloudTest {
 
     @Test
     public void retentionStrategyMinimumIdleMinutes() {
-        GitHubActionsRetentionStrategy strategy = new GitHubActionsRetentionStrategy(0);
+        GitHubActionsRetentionStrategy strategy = new GitHubActionsRetentionStrategy(0, false);
         assertEquals(1, strategy.getIdleMinutes());
 
-        GitHubActionsRetentionStrategy strategy2 = new GitHubActionsRetentionStrategy(-5);
+        GitHubActionsRetentionStrategy strategy2 = new GitHubActionsRetentionStrategy(-5, false);
         assertEquals(1, strategy2.getIdleMinutes());
     }
 
     @Test
     public void retentionStrategyIdleMinutes() {
-        GitHubActionsRetentionStrategy strategy = new GitHubActionsRetentionStrategy(10);
+        GitHubActionsRetentionStrategy strategy = new GitHubActionsRetentionStrategy(10, false);
         assertEquals(10, strategy.getIdleMinutes());
     }
 
@@ -435,7 +435,7 @@ public class GitHubActionsCloudTest {
     @Test
     public void agentWorkflowRunId(JenkinsRule j) throws Exception {
         GitHubActionsAgent agent = new GitHubActionsAgent(
-                "test-agent", "/tmp/agent", "gha-linux", 1, 5, "my-cloud");
+                "test-agent", "/tmp/agent", "gha-linux", 1, 5, "my-cloud", false);
         assertEquals(0L, agent.getWorkflowRunId());
         agent.setWorkflowRunId(12345L);
         assertEquals(12345L, agent.getWorkflowRunId());
@@ -444,7 +444,7 @@ public class GitHubActionsCloudTest {
     @Test
     public void agentWorkflowRunUrl(JenkinsRule j) throws Exception {
         GitHubActionsAgent agent = new GitHubActionsAgent(
-                "test-agent", "/tmp/agent", "gha-linux", 1, 5, "my-cloud");
+                "test-agent", "/tmp/agent", "gha-linux", 1, 5, "my-cloud", false);
         assertNull(agent.getWorkflowRunUrl());
         agent.setWorkflowRunUrl("https://github.com/myorg/myrepo/actions/runs/12345");
         assertEquals("https://github.com/myorg/myrepo/actions/runs/12345", agent.getWorkflowRunUrl());
@@ -525,5 +525,47 @@ public class GitHubActionsCloudTest {
                 42L, "https://github.com/org/repo/actions/runs/42");
         assertEquals(42L, result.getRunId());
         assertEquals("https://github.com/org/repo/actions/runs/42", result.getHtmlUrl());
+    }
+
+    // --- One-shot agent tests ---
+
+    @Test
+    public void templateOneShotDefaultFalse() {
+        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate("my-template", "gha-linux");
+        assertFalse(template.isOneShot());
+    }
+
+    @Test
+    public void templateOneShotSetter() {
+        GitHubActionsAgentTemplate template = new GitHubActionsAgentTemplate("my-template", "gha-linux");
+        template.setOneShot(true);
+        assertTrue(template.isOneShot());
+    }
+
+    @Test
+    public void agentOneShotFlag(JenkinsRule j) throws Exception {
+        GitHubActionsAgent agent = new GitHubActionsAgent(
+                "test-agent", "/tmp/agent", "gha-linux", 1, 5, "my-cloud", true);
+        assertTrue(agent.isOneShot());
+    }
+
+    @Test
+    public void agentNotOneShotByDefault(JenkinsRule j) throws Exception {
+        GitHubActionsAgent agent = new GitHubActionsAgent(
+                "test-agent", "/tmp/agent", "gha-linux", 1, 5, "my-cloud", false);
+        assertFalse(agent.isOneShot());
+    }
+
+    @Test
+    public void retentionStrategyOneShotFlag() {
+        GitHubActionsRetentionStrategy strategy = new GitHubActionsRetentionStrategy(5, true);
+        assertTrue(strategy.isOneShot());
+        assertEquals(5, strategy.getIdleMinutes());
+    }
+
+    @Test
+    public void retentionStrategyNotOneShotByDefault() {
+        GitHubActionsRetentionStrategy strategy = new GitHubActionsRetentionStrategy(5, false);
+        assertFalse(strategy.isOneShot());
     }
 }

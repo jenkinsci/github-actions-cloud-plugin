@@ -46,7 +46,7 @@ jobs:
         env:
           AGENT_SECRET: ${{ inputs.agent_secret }}
         run: |
-          java -jar agent.jar `
+          & "$env:JAVA_HOME_21_X64\bin\java" -jar agent.jar `
             -url "${{ inputs.jenkins_url }}" `
             -secret "$env:AGENT_SECRET" `
             -name "${{ inputs.agent_name }}" `

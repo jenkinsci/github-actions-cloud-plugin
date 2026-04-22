@@ -1,4 +1,4 @@
 FROM jenkins/jenkins:lts-slim
 ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
-RUN jenkins-plugin-cli --plugins credentials plain-credentials github
+RUN jenkins-plugin-cli --plugins credentials plain-credentials github cloud-stats
 COPY target/github-actions-cloud.hpi /usr/share/jenkins/ref/plugins/github-actions-cloud.hpi

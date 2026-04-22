@@ -21,24 +21,31 @@ public class GitHubActionsAgent extends AbstractCloudSlave implements TrackedIte
     private static final Logger LOGGER = Logger.getLogger(GitHubActionsAgent.class.getName());
 
     private final String cloudName;
+    private final boolean oneShot;
     private ProvisioningActivity.Id provisioningId;
     private long workflowRunId;
     private String workflowRunUrl;
 
     @DataBoundConstructor
     public GitHubActionsAgent(String name, String remoteFs, String labelString,
-                              int numExecutors, int idleMinutes, String cloudName)
+                              int numExecutors, int idleMinutes, String cloudName,
+                              boolean oneShot)
             throws Descriptor.FormException, IOException {
         super(name, remoteFs, new JNLPLauncher());
         this.cloudName = cloudName;
+        this.oneShot = oneShot;
         setNumExecutors(numExecutors);
         setMode(Node.Mode.EXCLUSIVE);
         setLabelString(labelString);
-        setRetentionStrategy(new GitHubActionsRetentionStrategy(idleMinutes));
+        setRetentionStrategy(new GitHubActionsRetentionStrategy(idleMinutes, oneShot));
     }
 
     public String getCloudName() {
         return cloudName;
+    }
+
+    public boolean isOneShot() {
+        return oneShot;
     }
 
     public long getWorkflowRunId() {

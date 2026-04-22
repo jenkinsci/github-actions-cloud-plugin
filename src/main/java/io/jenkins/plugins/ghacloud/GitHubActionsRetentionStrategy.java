@@ -18,14 +18,20 @@ public class GitHubActionsRetentionStrategy extends RetentionStrategy<AbstractCl
     private static final Logger LOGGER = Logger.getLogger(GitHubActionsRetentionStrategy.class.getName());
 
     private final int idleMinutes;
+    private final boolean oneShot;
 
     @DataBoundConstructor
-    public GitHubActionsRetentionStrategy(int idleMinutes) {
+    public GitHubActionsRetentionStrategy(int idleMinutes, boolean oneShot) {
         this.idleMinutes = Math.max(idleMinutes, 1);
+        this.oneShot = oneShot;
     }
 
     public int getIdleMinutes() {
         return idleMinutes;
+    }
+
+    public boolean isOneShot() {
+        return oneShot;
     }
 
     @Override
@@ -48,6 +54,14 @@ public class GitHubActionsRetentionStrategy extends RetentionStrategy<AbstractCl
         }
 
         if (c.isIdle() && c.isOnline()) {
+            if (oneShot && shouldTerminateOneShot(c)) {
+                LOGGER.log(Level.INFO,
+                        "One-shot agent {0} has completed its build, terminating",
+                        c.getName());
+                terminateAgent(c);
+                return 1;
+            }
+
             long idleMs = System.currentTimeMillis() - c.getIdleStartMilliseconds();
             if (idleMs > (long) idleMinutes * 60 * 1000) {
                 LOGGER.log(Level.INFO, "Agent {0} has been idle for {1} minutes, terminating",
@@ -58,7 +72,25 @@ public class GitHubActionsRetentionStrategy extends RetentionStrategy<AbstractCl
         return 1; // re-check every minute
     }
 
-    private void terminateAgent(AbstractCloudComputer<?> c) {
+    /**
+     * Determines whether a one-shot agent should be terminated. Returns true
+     * when the agent has been connected for at least 5 seconds and at least
+     * one executor is now idle with an idle-start time at or after connect-time.
+     */
+    private boolean shouldTerminateOneShot(AbstractCloudComputer<?> c) {
+        long connectTime = c.getConnectTime();
+        if (connectTime <= 0) {
+            return false;
+        }
+        if (System.currentTimeMillis() < connectTime + 5_000) {
+            return false;
+        }
+        return c.getExecutors().stream()
+                .anyMatch(e -> !e.isBusy()
+                        && e.getIdleStartMilliseconds() >= connectTime);
+    }
+
+    void terminateAgent(AbstractCloudComputer<?> c) {
         try {
             AbstractCloudSlave node = (AbstractCloudSlave) c.getNode();
             if (node != null) {

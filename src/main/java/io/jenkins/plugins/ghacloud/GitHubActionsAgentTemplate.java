@@ -28,6 +28,7 @@ public class GitHubActionsAgentTemplate implements Describable<GitHubActionsAgen
     private int idleMinutes = 5;
     private String workflowFileName;
     private int maxAgents;
+    private boolean oneShot;
 
     @DataBoundConstructor
     public GitHubActionsAgentTemplate(String templateName, String labelString) {
@@ -115,6 +116,15 @@ public class GitHubActionsAgentTemplate implements Describable<GitHubActionsAgen
     @DataBoundSetter
     public void setMaxAgents(int maxAgents) {
         this.maxAgents = maxAgents;
+    }
+
+    public boolean isOneShot() {
+        return oneShot;
+    }
+
+    @DataBoundSetter
+    public void setOneShot(boolean oneShot) {
+        this.oneShot = oneShot;
     }
 
     public boolean matches(Label label) {

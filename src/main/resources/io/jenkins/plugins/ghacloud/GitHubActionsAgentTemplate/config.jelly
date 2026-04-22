@@ -1,5 +1,7 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:st="jelly:stapler">
+
+    <st:adjunct includes="io.jenkins.plugins.ghacloud.GitHubActionsAgentTemplate.config" />
 
     <f:entry title="${%Template Name}" field="templateName">
         <f:textbox clazz="required" />
@@ -28,46 +30,6 @@
     <f:entry title="${%Idle Termination Minutes}" field="idleMinutes">
         <f:number default="5" clazz="required positive-number" />
     </f:entry>
-
-    <script>
-        (function() {
-            function toggleIdle(cb) {
-                var formItem = cb.closest('.jenkins-form-item');
-                if (!formItem) return;
-                var next = formItem.nextElementSibling;
-                while (next &amp;&amp; !next.querySelector('input[name="_.idleMinutes"]')) {
-                    next = next.nextElementSibling;
-                }
-                if (!next) return;
-                var idleInput = next.querySelector('input[name="_.idleMinutes"]');
-                if (idleInput) {
-                    idleInput.disabled = cb.checked;
-                }
-                next.style.opacity = cb.checked ? '0.4' : '1';
-                next.style.pointerEvents = cb.checked ? 'none' : '';
-            }
-
-            function bind(cb) {
-                if (cb.dataset.oneShotBound) return;
-                cb.dataset.oneShotBound = 'true';
-                toggleIdle(cb);
-                cb.addEventListener('change', function() { toggleIdle(cb); });
-                cb.addEventListener('click', function() { setTimeout(function(){ toggleIdle(cb); }, 0); });
-            }
-
-            function bindAll() {
-                document.querySelectorAll('input[name="_.oneShot"]').forEach(bind);
-            }
-
-            // Bind existing checkboxes
-            if (document.readyState === 'complete') { setTimeout(bindAll, 500); }
-            else { window.addEventListener('load', function() { setTimeout(bindAll, 500); }); }
-
-            // Watch for new templates added dynamically
-            var observer = new MutationObserver(function() { setTimeout(bindAll, 200); });
-            observer.observe(document.documentElement, { childList: true, subtree: true });
-        })();
-    </script>
 
     <f:entry title="${%Workflow File Name}" field="workflowFileName">
         <f:textbox clazz="required" placeholder="jenkins-agent.yml" />

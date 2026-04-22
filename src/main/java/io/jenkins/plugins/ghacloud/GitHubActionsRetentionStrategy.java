@@ -74,17 +74,20 @@ public class GitHubActionsRetentionStrategy extends RetentionStrategy<AbstractCl
 
     /**
      * Determines whether a one-shot agent should be terminated. Returns true
-     * when the agent is connected and at least one executor has transitioned
-     * from busy to idle (idle-start > connect-time + 5s buffer).
+     * when the agent has been connected for at least 5 seconds and at least
+     * one executor is now idle with an idle-start time at or after connect-time.
      */
     private boolean shouldTerminateOneShot(AbstractCloudComputer<?> c) {
-        if (c.getConnectTime() <= 0) {
+        long connectTime = c.getConnectTime();
+        if (connectTime <= 0) {
             return false;
         }
-        long threshold = c.getConnectTime() + 5_000;
+        if (System.currentTimeMillis() < connectTime + 5_000) {
+            return false;
+        }
         return c.getExecutors().stream()
                 .anyMatch(e -> !e.isBusy()
-                        && e.getIdleStartMilliseconds() > threshold);
+                        && e.getIdleStartMilliseconds() >= connectTime);
     }
 
     void terminateAgent(AbstractCloudComputer<?> c) {

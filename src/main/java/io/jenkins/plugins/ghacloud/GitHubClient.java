@@ -247,9 +247,7 @@ public class GitHubClient {
                 String error = errStream != null
                         ? new String(errStream.readAllBytes(), StandardCharsets.UTF_8)
                         : "(no response body)";
-                LOGGER.log(Level.WARNING, "PATCH {0} returned HTTP {1}: {2}",
-                        new Object[]{url, status, error});
-                return "";
+                throw new IOException("PATCH " + url + " returned HTTP " + status + ": " + error);
             }
             return new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         } finally {

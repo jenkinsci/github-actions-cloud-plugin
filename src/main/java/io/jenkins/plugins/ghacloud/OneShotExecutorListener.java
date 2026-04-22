@@ -6,6 +6,7 @@ import hudson.model.ExecutorListener;
 import hudson.model.Queue;
 import hudson.slaves.AbstractCloudComputer;
 
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -55,14 +56,10 @@ public class OneShotExecutorListener implements ExecutorListener {
         computer.setAcceptingTasks(false);
 
         // Terminate after a short delay to let Jenkins finish executor housekeeping
-        new java.util.Timer("one-shot-terminator-" + computer.getName(), true).schedule(
-                new java.util.TimerTask() {
-                    @Override
-                    public void run() {
-                        GitHubActionsRetentionStrategy rs =
-                                (GitHubActionsRetentionStrategy) agent.getRetentionStrategy();
-                        rs.terminateAgent(computer);
-                    }
-                }, 3_000);
+        jenkins.util.Timer.get().schedule(() -> {
+            GitHubActionsRetentionStrategy rs =
+                    (GitHubActionsRetentionStrategy) agent.getRetentionStrategy();
+            rs.terminateAgent(computer);
+        }, 3, TimeUnit.SECONDS);
     }
 }

@@ -52,7 +52,12 @@ public class GitHubActionsRunListener extends RunListener<Run<?, ?>> {
             EnvVars env = computer.getEnvironment();
             String summaryPath = env.get("GITHUB_STEP_SUMMARY");
             if (summaryPath != null && !summaryPath.isEmpty()) {
-                FilePath summaryFile = new FilePath(computer.getChannel(), summaryPath);
+                hudson.remoting.VirtualChannel channel = computer.getChannel();
+                if (channel == null) {
+                    LOGGER.log(Level.WARNING, "Agent {0} channel is null, cannot write step summary", builtOn);
+                    return;
+                }
+                FilePath summaryFile = new FilePath(channel, summaryPath);
                 String markdown = "### Jenkins Build\\n"
                         + "**Job:** " + jobName + "\\n";
                 if (!buildUrl.isEmpty()) {

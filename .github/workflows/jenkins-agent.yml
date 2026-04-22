@@ -43,6 +43,7 @@ jobs:
       - name: Connect to Jenkins
         env:
           AGENT_SECRET: ${{ inputs.agent_secret }}
+          JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
         run: |
           java -jar agent.jar \
             -url "${{ inputs.jenkins_url }}" \

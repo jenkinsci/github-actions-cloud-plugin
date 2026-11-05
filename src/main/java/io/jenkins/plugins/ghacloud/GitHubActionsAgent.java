@@ -17,6 +17,9 @@ import org.jenkinsci.plugins.cloudstats.TrackedItem;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -88,8 +91,18 @@ public class GitHubActionsAgent extends AbstractCloudSlave implements TrackedIte
         Computer computer = toComputer();
         VirtualChannel channel = computer != null ? computer.getChannel() : null;
         if (channel != null) {
+            disableReconnect(channel);
+        }
+    }
+
+    void disableReconnect(VirtualChannel channel) throws IOException, InterruptedException {
+        try {
             // Stop reconnecting before removing the node closes its channel.
-            channel.call(new DisableReconnect());
+            channel.callAsync(new DisableReconnect()).get(5, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            LOGGER.log(Level.WARNING, "Timed out disabling reconnection for agent " + getNodeName(), e);
+        } catch (ExecutionException e) {
+            LOGGER.log(Level.WARNING, "Failed to disable reconnection for agent " + getNodeName(), e.getCause());
         }
     }
 

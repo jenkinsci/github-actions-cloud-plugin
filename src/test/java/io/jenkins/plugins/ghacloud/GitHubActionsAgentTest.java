@@ -5,9 +5,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import hudson.model.Result;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.remoting.Channel;
+import hudson.remoting.LocalChannel;
 import hudson.slaves.AbstractCloudComputer;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -85,6 +89,55 @@ class GitHubActionsAgentTest {
         agent.terminate();
 
         assertNull(j.jenkins.getNode(agent.getNodeName()));
+    }
+
+    @Test
+    void disablingReconnectTimesOutOnUnresponsiveChannel(JenkinsRule j) throws Exception {
+        GitHubActionsAgent agent = createAgent(j, false);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            executor.submit(() -> {
+                new CountDownLatch(1).await();
+                return null;
+            });
+            LocalChannel channel = new LocalChannel(executor);
+
+            long start = System.nanoTime();
+            assertTimeoutPreemptively(Duration.ofSeconds(10), () -> agent.disableReconnect(channel));
+            assertTrue(System.nanoTime() - start >= TimeUnit.SECONDS.toNanos(5));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void disablingReconnectHandlesRemoteFailure(JenkinsRule j) throws Exception {
+        GitHubActionsAgent agent = createAgent(j, false);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            // The controller has no inbound Remoting engine, so the remote call fails.
+            assertDoesNotThrow(() -> agent.disableReconnect(new LocalChannel(executor)));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void disablingReconnectPreservesInterruption(JenkinsRule j) throws Exception {
+        GitHubActionsAgent agent = createAgent(j, false);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            executor.submit(() -> {
+                new CountDownLatch(1).await();
+                return null;
+            });
+            Thread.currentThread().interrupt();
+
+            assertThrows(InterruptedException.class, () -> agent.disableReconnect(new LocalChannel(executor)));
+        } finally {
+            Thread.interrupted();
+            executor.shutdownNow();
+        }
     }
 
     private GitHubActionsAgent createAgent(JenkinsRule j, boolean oneShot) throws Exception {

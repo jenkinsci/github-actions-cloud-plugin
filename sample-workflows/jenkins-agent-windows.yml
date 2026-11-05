@@ -51,4 +51,4 @@ jobs:
             -secret "$env:AGENT_SECRET" `
             -name "${{ inputs.agent_name }}" `
             -workDir "C:\agent" `
-            -noReconnect
+            -noReconnectAfter 5m

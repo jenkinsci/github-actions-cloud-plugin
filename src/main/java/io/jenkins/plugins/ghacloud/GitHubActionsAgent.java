@@ -1,13 +1,17 @@
 package io.jenkins.plugins.ghacloud;
 
 import hudson.Extension;
+import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Node;
 import hudson.model.Slave;
 import hudson.model.TaskListener;
+import hudson.remoting.Engine;
+import hudson.remoting.VirtualChannel;
 import hudson.slaves.AbstractCloudComputer;
 import hudson.slaves.AbstractCloudSlave;
 import hudson.slaves.JNLPLauncher;
+import jenkins.security.MasterToSlaveCallable;
 import org.jenkinsci.plugins.cloudstats.ProvisioningActivity;
 import org.jenkinsci.plugins.cloudstats.TrackedItem;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -81,9 +85,26 @@ public class GitHubActionsAgent extends AbstractCloudSlave implements TrackedIte
     @Override
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
         LOGGER.log(Level.INFO, "Terminating GitHub Actions agent: {0}", getNodeName());
-        // The GitHub Actions workflow terminates when the agent process exits.
-        // No explicit cleanup is needed — the GHA runner will detect the
-        // disconnection and the workflow job will complete.
+        Computer computer = toComputer();
+        VirtualChannel channel = computer != null ? computer.getChannel() : null;
+        if (channel != null) {
+            // Stop reconnecting before removing the node closes its channel.
+            channel.call(new DisableReconnect());
+        }
+    }
+
+    private static class DisableReconnect extends MasterToSlaveCallable<Void, IOException> {
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public Void call() throws IOException {
+            Engine engine = Engine.current();
+            if (engine == null) {
+                throw new IOException("Cannot disable reconnection: no inbound Remoting engine");
+            }
+            engine.setNoReconnect(true);
+            return null;
+        }
     }
 
     @Extension

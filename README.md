@@ -24,10 +24,29 @@ Jenkins controller                     GitHub Actions
       ├─ Build runs on agent                 │
       ├─ Build completes                     │
       ├─ Idle timeout → terminate()          │
-      │                                      ├─ agent.jar exits (-noReconnect)
+      ├─ Disable reconnect, disconnect ─────►│
+      │                                      ├─ agent.jar exits
       │                                      ├─ Workflow job completes
       └──────────────────────────────────────┘
 ```
+
+### Connection recovery
+
+Use `-noReconnectAfter 5m` instead of `-noReconnect` in the agent command.
+This keeps the runner and its workspace available for reconnection after a
+transient network failure, so recoverable Pipeline steps can continue.
+It does not retry builds or suppress Jenkins build failures.
+
+On intentional termination (one-shot completion or idle timeout), the plugin
+disables reconnection in the running agent before removing its node. The
+agent therefore exits promptly after normal shutdown. If the agent is already
+unreachable and cannot receive that instruction, the reconnect timeout bounds
+how long it keeps retrying.
+
+Upgrade the plugin before changing existing workflows: older versions do not
+disable reconnection during termination and will leave the runner retrying
+until its timeout. A successful Actions workflow is not proof of a successful
+Jenkins build; check the Jenkins result as well.
 
 ## Requirements
 
@@ -82,7 +101,7 @@ jobs:
             -secret "$AGENT_SECRET" \
             -name "${{ inputs.agent_name }}" \
             -workDir "/home/runner/agent" \
-            -noReconnect
+            -noReconnectAfter 5m
 ```
 
 **Windows** (`jenkins-agent-windows.yml`): use `runs-on: windows-latest` and PowerShell syntax — see the [sample workflows](sample-workflows/).

@@ -52,4 +52,4 @@ jobs:
             -name "${{ inputs.agent_name }}" `
             -workDir "C:\agent" `
             -webSocket `
-            -noReconnect
+            -noReconnectAfter 5m

@@ -13,15 +13,20 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import jenkins.security.MasterToSlaveCallable;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.LogRecorder;
 import org.jvnet.hudson.test.junit.jupiter.InboundAgentExtension;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
@@ -137,6 +142,52 @@ class GitHubActionsAgentTest {
         } finally {
             Thread.interrupted();
             executor.shutdownNow();
+        }
+    }
+
+    @Test
+    @EnabledOnOs({OS.LINUX, OS.MAC})
+    void unresponsiveAgentDoesNotBlockTermination(JenkinsRule j) throws Exception {
+        GitHubActionsAgent agent = createAgent(j, false);
+        inbound.start(j, agent.getNodeName());
+        AbstractCloudComputer<?> computer = (AbstractCloudComputer<?>) agent.toComputer();
+        assertNotNull(computer);
+        Channel channel = computer.getChannel();
+        assertNotNull(channel);
+        long pid = channel.call(new AgentPid());
+
+        try (LogRecorder logs = new LogRecorder()
+                .record(GitHubActionsAgent.class, Level.WARNING)
+                .capture(10)) {
+            try {
+                signalAgent(pid, "-STOP");
+                assertNotNull(computer.getChannel());
+                assertTimeoutPreemptively(Duration.ofSeconds(10), agent::terminate);
+                assertNull(j.jenkins.getNode(agent.getNodeName()));
+                assertTrue(logs.getMessages().stream()
+                        .anyMatch(message -> message.contains("Timed out disabling reconnection")));
+            } finally {
+                signalAgent(pid, "-CONT");
+            }
+        }
+    }
+
+    private static void signalAgent(long pid, String signal) throws Exception {
+        assertTrue(pid > 0);
+        assertNotEquals(ProcessHandle.current().pid(), pid);
+        Process process = new ProcessBuilder("/bin/kill", signal, Long.toString(pid))
+                .inheritIO()
+                .start();
+        assertTrue(process.waitFor(5, TimeUnit.SECONDS));
+        assertEquals(0, process.exitValue());
+    }
+
+    private static class AgentPid extends MasterToSlaveCallable<Long, IOException> {
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public Long call() {
+            return ProcessHandle.current().pid();
         }
     }
 

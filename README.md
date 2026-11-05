@@ -43,6 +43,11 @@ agent therefore exits promptly after normal shutdown. If the agent is already
 unreachable and cannot receive that instruction, the reconnect timeout bounds
 how long it keeps retrying.
 
+The remote shutdown acknowledgement has a five-second timeout. Timeouts and
+remote failures are logged, and local node removal still proceeds. This
+prevents an unresponsive agent from holding a shared controller timer thread
+indefinitely; it is separate from the agent's five-minute reconnection timeout.
+
 Upgrade the plugin before changing existing workflows: older versions do not
 disable reconnection during termination and will leave the runner retrying
 until its timeout. A successful Actions workflow is not proof of a successful
